@@ -46,7 +46,7 @@ async function fetchJobsForRegion(countryName, searchQuery, defaultCity) {
 // MAIN INGESTION PIPELINE
 async function runIngestionPipeline() {
   try {
-    // 28 Target Countries List
+    // 33 Target Countries List
     const targetCountries = [
       { name: 'Sweden', query: 'welder cnc engineer', city: 'Stockholm' },
       { name: 'Finland', query: 'welder machinist technician', city: 'Helsinki' },
@@ -75,7 +75,14 @@ async function runIngestionPipeline() {
       { name: 'Qatar', query: 'engineer technician mechanic', city: 'Doha' },
       { name: 'Kuwait', query: 'engineer technician driver', city: 'Kuwait City' },
       { name: 'Taiwan', query: 'technician engineer operator', city: 'Taipei' },
-      { name: 'Malaysia', query: 'engineer technician operator', city: 'Kuala Lumpur' }
+      { name: 'Malaysia', query: 'engineer technician operator', city: 'Kuala Lumpur' },
+      
+      // 5 New Additions
+      { name: 'Belgium', query: 'engineer technician operator', city: 'Brussels' },
+      { name: 'Norway', query: 'engineer welder technician', city: 'Oslo' },
+      { name: 'Denmark', query: 'engineer technician machinist', city: 'Copenhagen' },
+      { name: 'United Arab Emirates', query: 'engineer technician mechanic', city: 'Dubai' },
+      { name: 'Oman', query: 'engineer technician operator', city: 'Muscat' }
     ];
 
     let allJobs = [];
@@ -89,7 +96,7 @@ async function runIngestionPipeline() {
       return;
     }
 
-    console.log(`Appending ${allJobs.length} jobs across 28 target countries to Google Sheet...`);
+    console.log(`Appending ${allJobs.length} jobs across 33 target countries to Google Sheet...`);
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
@@ -98,7 +105,7 @@ async function runIngestionPipeline() {
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: allJobs },
     });
-    console.log('Successfully updated sheet with 28 target countries!');
+    console.log('Successfully updated sheet with 33 target countries!');
   } catch (error) {
     console.error('Pipeline error:', error.message);
   }
