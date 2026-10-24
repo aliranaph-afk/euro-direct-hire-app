@@ -12,18 +12,19 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
-// GENERIC COUNTRY FETCH HELPER
-async function fetchJobsForCountry(countryName, searchQuery, defaultCity) {
-  console.log(`Fetching live jobs from ${countryName}...`);
+// GENERIC REGIONAL SEARCH HELPER
+async function fetchJobsForRegion(countryName, searchQuery, defaultCity) {
+  console.log(`Fetching live jobs for ${countryName}...`);
   try {
     const response = await fetch(`https://jobsearch.api.jobtechdev.se/search?q=${encodeURIComponent(searchQuery)}&limit=3`);
     const data = await response.json();
     const rows = [];
+    
     for (const hit of data.hits || []) {
       const employer = hit.employer?.name || `${countryName} Direct Employer`;
       if (/bemanning|staffing|manpower|adecco|randstad/i.test(employer)) continue;
       
-      const isSkilled = /cnc|welder|engineer|machinist|technician/i.test(hit.headline);
+      const isSkilled = /cnc|welder|engineer|machinist|technician|developer/i.test(hit.headline);
       rows.push([
         hit.headline, 
         countryName, 
@@ -45,21 +46,21 @@ async function fetchJobsForCountry(countryName, searchQuery, defaultCity) {
 // MAIN INGESTION PIPELINE
 async function runIngestionPipeline() {
   try {
-    // Fetching across 6 European countries
-    const swedenJobs = await fetchJobsForCountry('Sweden', 'welder cnc', 'Sweden');
-    const denmarkJobs = await fetchJobsForCountry('Denmark', 'denmark welder cnc', 'Copenhagen');
-    const norwayJobs = await fetchJobsForCountry('Norway', 'norway welder engineer', 'Oslo');
-    const finlandJobs = await fetchJobsForCountry('Finland', 'finland welder machinist', 'Helsinki');
-    const icelandJobs = await fetchJobsForCountry('Iceland', 'iceland welder mechanic', 'Reykjavik');
-    const netherlandsJobs = await fetchJobsForCountry('Netherlands', 'netherlands engineer technician', 'Amsterdam');
+    // 1. Existing European & Nordic targets
+    const swedenJobs = await fetchJobsForRegion('Sweden', 'welder cnc', 'Sweden');
+    const finlandJobs = await fetchJobsForRegion('Finland', 'finland welder machinist', 'Helsinki');
+    
+    // 2. New requested targets
+    const irelandJobs = await fetchJobsForRegion('Ireland', 'ireland engineer technician', 'Dublin');
+    const scotlandJobs = await fetchJobsForRegion('Scotland', 'scotland welder engineer', 'Glasgow');
+    const canadaJobs = await fetchJobsForRegion('Canada', 'canada welder technician', 'Toronto');
 
     const allJobs = [
       ...swedenJobs, 
-      ...denmarkJobs, 
-      ...norwayJobs, 
       ...finlandJobs, 
-      ...icelandJobs, 
-      ...netherlandsJobs
+      ...irelandJobs, 
+      ...scotlandJobs, 
+      ...canadaJobs
     ];
 
     if (allJobs.length === 0) {
@@ -67,7 +68,7 @@ async function runIngestionPipeline() {
       return;
     }
 
-    console.log(`Appending ${allJobs.length} multi-country jobs to Google Sheet...`);
+    console.log(`Appending ${allJobs.length} target jobs to Google Sheet...`);
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
@@ -76,7 +77,7 @@ async function runIngestionPipeline() {
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: allJobs },
     });
-    console.log('Successfully updated sheet with expanded multi-country data!');
+    console.log('Successfully updated sheet!');
   } catch (error) {
     console.error('Pipeline error:', error.message);
   }
