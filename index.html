@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EuroDirect-Hire OSINT | Verified European Jobs for Filipinos</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col justify-between">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm tracking-wider">
+          EU
+        </div>
+        <div>
+          <span class="text-sm font-bold tracking-tight text-slate-900 block leading-none">
+            EuroDirect-Hire OSINT
+          </span>
+          <span class="text-[11px] text-slate-500 font-medium">
+            Verified EU Vacancies & PH DMW Compliance
+          </span>
+        </div>
+      </div>
+      <div id="userAuthDisplay" class="text-xs font-semibold text-slate-600">
+        <!-- Dynamically updated -->
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="max-w-6xl mx-auto px-4 py-8 w-full flex-grow">
+
+    <!-- VIEW 1: LOGIN & OTP SCREEN -->
+    <div id="authView" class="max-w-md mx-auto bg-white rounded-2xl border border-slate-200 p-8 shadow-sm space-y-6 mt-12">
+      <div class="text-center space-y-1">
+        <h1 class="text-xl font-bold text-slate-900">Sign In to Your Account</h1>
+        <p class="text-xs text-slate-500">Enter your email to receive a 6-digit verification code.</p>
+      </div>
+
+      <div id="emailStep" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Email Address</label>
+          <input type="email" id="loginEmail" placeholder="e.g. juandela@gmail.com" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none">
+        </div>
+        <button onclick="sendOtp()" id="sendOtpBtn" class="w-full py-2.5 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-sm">
+          Send Verification Code ↗
+        </button>
+      </div>
+
+      <div id="otpStep" class="space-y-4 hidden">
+        <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800">
+          Verification code sent! Please check your inbox.
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Enter 6-Digit OTP</label>
+          <input type="text" id="loginOtp" placeholder="123456" maxlength="6" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono text-center tracking-widest text-lg">
+        </div>
+        <button onclick="verifyOtp()" id="verifyOtpBtn" class="w-full py-2.5 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-sm">
+          Verify & Access Platform
+        </button>
+      </div>
+      <div id="authError" class="text-xs text-red-600 text-center font-medium"></div>
+    </div>
+
+    <!-- VIEW 2: SEARCH & DASHBOARD VIEW (Hidden initially) -->
+    <div id="dashboardView" class="space-y-6 hidden">
+      
+      <!-- HERO BANNER -->
+      <div class="rounded-2xl bg-slate-900 text-white p-6 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span id="tierBadge" class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            Tier: Free Trial
+          </span>
+          <span id="searchLimitDisplay" class="text-xs text-slate-300">
+            Searches today: 0 / 3
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">
+          Verified European Direct-Hire Job Search
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-300 max-w-4xl leading-relaxed">
+          Search verified government database records across Europe. Staffing agencies are automatically excluded. Check the PH Outbound DMW Compliance badge on results before applying.
+        </p>
+      </div>
+
+      <!-- DUAL SEARCH BAR -->
+      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div>
+          <label class="block text-[11px] font-semibold uppercase text-slate-500 mb-1">Position / Job Title</label>
+          <input type="text" id="searchPosition" placeholder="e.g. Welder, CNC, Factory..." class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900">
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold uppercase text-slate-500 mb-1">Country / Destination</label>
+          <input type="text" id="searchCountry" placeholder="e.g. Sweden, Norway, Czechia..." class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900">
+        </div>
+        <div class="flex items-end">
+          <button onclick="executeSearch()" id="searchBtn" class="w-full py-2.5 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-sm">
+            Search Job Results 🔍
+          </button>
+        </div>
+      </div>
+
+      <!-- SEARCH RESULTS CONTAINER -->
+      <div id="resultsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Populated via JS -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- PAYWALL MODAL (Triggered on Day 4 or limit reached) -->
+  <div id="paywallModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="text-center space-y-1">
+        <h2 class="text-xl font-bold text-slate-900">Subscription Required</h2>
+        <p id="paywallReason" class="text-xs text-slate-500">Your free trial has expired or daily limit has been reached. Choose a paid tier to continue.</p>
+      </div>
+
+      <!-- PRICING CARDS -->
+      <div class="grid grid-cols-3 gap-3">
+        <div onclick="selectTier('Bronze', 39)" id="tierBronze" class="cursor-pointer border-2 rounded-xl p-3 text-center border-slate-200 hover:border-slate-900 transition-all">
+          <div class="text-xs font-bold text-slate-900">BRONZE</div>
+          <div class="text-sm font-extrabold text-emerald-600 mt-1">₱39</div>
+          <div class="text-[10px] text-slate-500 mt-1">7 results/day<br>7 Days</div>
+        </div>
+        <div onclick="selectTier('Silver', 49)" id="tierSilver" class="cursor-pointer border-2 rounded-xl p-3 text-center border-slate-200 hover:border-slate-900 transition-all">
+          <div class="text-xs font-bold text-slate-900">SILVER</div>
+          <div class="text-sm font-extrabold text-emerald-600 mt-1">₱49</div>
+          <div class="text-[10px] text-slate-500 mt-1">14 results/day<br>14 Days</div>
+        </div>
+        <div onclick="selectTier('Gold', 59)" id="tierGold" class="cursor-pointer border-2 rounded-xl p-3 text-center border-slate-200 hover:border-slate-900 transition-all">
+          <div class="text-xs font-bold text-slate-900">GOLD</div>
+          <div class="text-sm font-extrabold text-emerald-600 mt-1">₱59</div>
+          <div class="text-[10px] text-slate-500 mt-1">21 results/day<br>21 Days</div>
+        </div>
+      </div>
+
+      <!-- GCASH PAYMENT BOX -->
+      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+        <div class="text-xs font-bold text-slate-900 text-center">Step 1: Scan GCash QR & Pay <span id="selectedPriceDisplay" class="text-emerald-600">₱39</span></div>
+        <div class="flex justify-center">
+          <!-- Replace src with your GCash QR code image link or file -->
+          <div class="h-36 w-36 bg-slate-200 rounded-lg flex items-center justify-center text-[10px] text-slate-500 border border-slate-300">
+            [ GCash QR Code Image ]
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold uppercase text-slate-600 mb-1">Step 2: Enter GCash Reference Number</label>
+          <input type="text" id="gcashRefInput" placeholder="e.g. 1048293849201" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono">
+        </div>
+        <button onclick="submitGcashPayment()" class="w-full py-2 rounded-lg text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm">
+          Submit Payment for Verification ↗
+        </button>
+      </div>
+      <div id="paymentStatusMsg" class="text-xs text-center font-medium"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-200 bg-white py-6 mt-12">
+    <div class="max-w-6xl mx-auto px-4 text-center text-xs text-slate-500">
+      EuroDirect-Hire OSINT • Designed in alignment with DMW RA 11641 outbound rules.
+    </div>
+  </footer>
+
+  <!-- FRONTEND SCRIPT LOGIC -->
+  <script>
+    // ** REPLACE WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL **
+    const API_URL = "https://script.google.com/macros/s/AKfycbyVq2vNpaZ2Js8EgvlDuo4d7onDOAA6t_imxuh212r_n6BM8nvRlya3Wr6H-bgSk6E/exec";
+
+    let currentUserEmail = "";
+    let selectedTierName = "Bronze";
+    let selectedTierPrice = 39;
+
+    function selectTier(tier, price) {
+      selectedTierName = tier;
+      selectedTierPrice = price;
+      document.getElementById("selectedPriceDisplay").innerText = "₱" + price;
+      ['Bronze', 'Silver', 'Gold'].forEach(t => {
+        document.getElementById("tier" + t).className = "cursor-pointer border-2 rounded-xl p-3 text-center border-slate-200 hover:border-slate-900 transition-all";
+      });
+      document.getElementById("tier" + tier).className = "cursor-pointer border-2 rounded-xl p-3 text-center border-slate-900 bg-slate-50 transition-all shadow-sm";
+    }
+
+    async function sendOtp() {
+      const email = document.getElementById("loginEmail").value.trim();
+      const errEl = document.getElementById("authError");
+      errEl.innerText = "";
+      if (!email) { errEl.innerText = "Please enter a valid email address."; return; }
+
+      document.getElementById("sendOtpBtn").innerText = "Sending OTP...";
+      try {
+        const res = await fetch(`${API_URL}?action=sendOtp&email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+        if (data.success) {
+          currentUserEmail = email;
+          document.getElementById("emailStep").classList.add("hidden");
+          document.getElementById("otpStep").classList.remove("hidden");
+        } else {
+          errEl.innerText = data.message;
+        }
+      } catch (e) {
+        errEl.innerText = "Network error connecting to backend.";
+      }
+      document.getElementById("sendOtpBtn").innerText = "Send Verification Code ↗";
+    }
+
+    async function verifyOtp() {
+      const otp = document.getElementById("loginOtp").value.trim();
+      const errEl = document.getElementById("authError");
+      errEl.innerText = "";
+      if (!otp) { errEl.innerText = "Please enter the 6-digit OTP."; return; }
+
+      document.getElementById("verifyOtpBtn").innerText = "Verifying...";
+      try {
+        const res = await fetch(`${API_URL}?action=verifyOtp&email=${encodeURIComponent(currentUserEmail)}&otp=${encodeURIComponent(otp)}`);
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById("authView").classList.add("hidden");
+          document.getElementById("dashboardView").classList.remove("hidden");
+          document.getElementById("userAuthDisplay").innerText = currentUserEmail;
+          executeSearch(); // Load initial search
+        } else {
+          errEl.innerText = data.message;
+        }
+      } catch (e) {
+        errEl.innerText = "Verification failed.";
+      }
+      document.getElementById("verifyOtpBtn").innerText = "Verify & Access Platform";
+    }
+
+    async function executeSearch() {
+      const position = document.getElementById("searchPosition").value.trim();
+      const country = document.getElementById("searchCountry").value.trim();
+      const container = document.getElementById("resultsContainer");
+      container.innerHTML = `<div class="col-span-2 text-center py-8 text-xs text-slate-500">Searching verified database...</div>`;
+
+      try {
+        const res = await fetch(`${API_URL}?action=search&email=${encodeURIComponent(currentUserEmail)}&position=${encodeURIComponent(position)}&country=${encodeURIComponent(country)}`);
+        const data = await res.json();
+
+        if (data.paywallRequired || data.dailyLimitReached) {
+          document.getElementById("paywallReason").innerText = data.message;
+          document.getElementById("paywallModal").classList.remove("hidden");
+          container.innerHTML = "";
+          return;
+        }
+
+        if (!data.success) {
+          container.innerHTML = `<div class="col-span-2 text-center py-8 text-xs text-red-600">${data.message}</div>`;
+          return;
+        }
+
+        // Update Header stats
+        document.getElementById("tierBadge").innerText = "Tier: " + data.userTier;
+        document.getElementById("searchLimitDisplay").innerText = `Searches today: ${data.searchesUsedToday} / ${data.dailyLimit}`;
+
+        if (data.results.length === 0) {
+          container.innerHTML = `<div class="col-span-2 text-center py-8 text-xs text-slate-500">No matching jobs found in Google Sheets database.</div>`;
+          return;
+        }
+
+        // Render Results
+        container.innerHTML = "";
+        data.results.forEach(job => {
+          container.innerHTML += `
+            <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-800 border border-indigo-300">
+                    Sponsorship: ${job.sponsorshipBadge}
+                  </span>
+                  <span class="text-xs font-medium text-slate-500">${job.priorityTier}</span>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900">${job.jobTitle}</h3>
+                <p class="text-sm font-semibold text-slate-700 mt-1">${job.employerName}</p>
+                <div class="mt-2 text-xs text-slate-600 bg-slate-50 p-2 rounded-md border border-slate-200">
+                  📍 ${job.cityOrRegion}, ${job.country}
+                </div>
+                <div class="mt-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
+                  <strong>PH Outbound DMW Notice:</strong> ${job.dmwNotice}
+                </div>
+              </div>
+              <div class="pt-3 border-t border-slate-100 flex justify-end">
+                <a href="${job.officialApplyUrl}" target="_blank" class="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors">
+                  Apply on Official Site ↗
+                </a>
+              </div>
+            </article>
+          `;
+        });
+
+      } catch (e) {
+        container.innerHTML = `<div class="col-span-2 text-center py-8 text-xs text-red-600">Error executing search. Check Apps Script URL configuration.</div>`;
+      }
+    }
+
+    async function submitGcashPayment() {
+      const refNumber = document.getElementById("gcashRefInput").value.trim();
+      const statusMsg = document.getElementById("paymentStatusMsg");
+      statusMsg.innerText = "";
+
+      if (!refNumber) {
+        statusMsg.innerText = "Please enter your GCash reference number.";
+        statusMsg.className = "text-xs text-center font-medium text-red-600";
+        return;
+      }
+
+      statusMsg.innerText = "Submitting reference to verification queue...";
+      statusMsg.className = "text-xs text-center font-medium text-slate-600";
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "submitPayment",
+            email: currentUserEmail,
+            tier: selectedTierName,
+            refNumber: refNumber
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          statusMsg.innerText = "Success! Payment logged as Pending. Once verified by admin, you will receive a confirmation email.";
+          statusMsg.className = "text-xs text-center font-medium text-emerald-600";
+          setTimeout(() => {
+            document.getElementById("paywallModal").classList.add("hidden");
+          }, 4000);
+        } else {
+          statusMsg.innerText = data.message;
+          statusMsg.className = "text-xs text-center font-medium text-red-600";
+        }
+      } catch (e) {
+        statusMsg.innerText = "Failed to submit payment details.";
+        statusMsg.className = "text-xs text-center font-medium text-red-600";
+      }
+    }
+  </script>
+</body>
+</html>

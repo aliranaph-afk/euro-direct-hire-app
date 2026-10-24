@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "googleapis": "^188.0.0"
+  },
+  "name": "euro-direct-hire-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "ingest.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
