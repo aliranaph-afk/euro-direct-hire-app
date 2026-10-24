@@ -24,7 +24,7 @@ async function fetchJobsForRegion(countryName, searchQuery, defaultCity) {
       const employer = hit.employer?.name || `${countryName} Direct Employer`;
       if (/bemanning|staffing|manpower|adecco|randstad/i.test(employer)) continue;
       
-      const isSkilled = /cnc|welder|engineer|machinist|technician|developer/i.test(hit.headline);
+      const isSkilled = /cnc|welder|engineer|machinist|technician|developer|mechanic|operator/i.test(hit.headline);
       rows.push([
         hit.headline, 
         countryName, 
@@ -46,21 +46,29 @@ async function fetchJobsForRegion(countryName, searchQuery, defaultCity) {
 // MAIN INGESTION PIPELINE
 async function runIngestionPipeline() {
   try {
-    // 1. Existing European & Nordic targets
+    // Pipeline covering all 10 target countries
     const swedenJobs = await fetchJobsForRegion('Sweden', 'welder cnc', 'Sweden');
     const finlandJobs = await fetchJobsForRegion('Finland', 'finland welder machinist', 'Helsinki');
-    
-    // 2. New requested targets
     const irelandJobs = await fetchJobsForRegion('Ireland', 'ireland engineer technician', 'Dublin');
     const scotlandJobs = await fetchJobsForRegion('Scotland', 'scotland welder engineer', 'Glasgow');
     const canadaJobs = await fetchJobsForRegion('Canada', 'canada welder technician', 'Toronto');
+    const hungaryJobs = await fetchJobsForRegion('Hungary', 'hungary engineer operator', 'Budapest');
+    const czechJobs = await fetchJobsForRegion('Czech Republic', 'czech welder machinist', 'Prague');
+    const slovakiaJobs = await fetchJobsForRegion('Slovakia', 'slovakia technician assembly', 'Bratislava');
+    const croatiaJobs = await fetchJobsForRegion('Croatia', 'croatia technician mechanic', 'Zagreb');
+    const luxembourgJobs = await fetchJobsForRegion('Luxembourg', 'luxembourg engineer developer', 'Luxembourg City');
 
     const allJobs = [
       ...swedenJobs, 
       ...finlandJobs, 
       ...irelandJobs, 
       ...scotlandJobs, 
-      ...canadaJobs
+      ...canadaJobs,
+      ...hungaryJobs,
+      ...czechJobs,
+      ...slovakiaJobs,
+      ...croatiaJobs,
+      ...luxembourgJobs
     ];
 
     if (allJobs.length === 0) {
@@ -68,7 +76,7 @@ async function runIngestionPipeline() {
       return;
     }
 
-    console.log(`Appending ${allJobs.length} target jobs to Google Sheet...`);
+    console.log(`Appending ${allJobs.length} multi-country jobs to Google Sheet...`);
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
@@ -77,7 +85,7 @@ async function runIngestionPipeline() {
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: allJobs },
     });
-    console.log('Successfully updated sheet!');
+    console.log('Successfully updated sheet with all target countries!');
   } catch (error) {
     console.error('Pipeline error:', error.message);
   }
