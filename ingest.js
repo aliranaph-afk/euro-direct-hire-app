@@ -46,46 +46,43 @@ async function fetchJobsForRegion(countryName, searchQuery, defaultCity) {
 // MAIN INGESTION PIPELINE
 async function runIngestionPipeline() {
   try {
-    // 28 Target Countries Pipeline
-    const swedenJobs = await fetchJobsForRegion('Sweden', 'welder cnc', 'Sweden');
-    const finlandJobs = await fetchJobsForRegion('Finland', 'finland welder machinist', 'Helsinki');
-    const irelandJobs = await fetchJobsForRegion('Ireland', 'ireland engineer technician', 'Dublin');
-    const scotlandJobs = await fetchJobsForRegion('Scotland', 'scotland welder engineer', 'Glasgow');
-    const canadaJobs = await fetchJobsForRegion('Canada', 'canada welder technician', 'Toronto');
-    const hungaryJobs = await fetchJobsForRegion('Hungary', 'hungary engineer operator', 'Budapest');
-    const czechJobs = await fetchJobsForRegion('Czech Republic', 'czech welder machinist', 'Prague');
-    const slovakiaJobs = await fetchJobsForRegion('Slovakia', 'slovakia technician assembly', 'Bratislava');
-    const croatiaJobs = await fetchJobsForRegion('Croatia', 'croatia technician mechanic', 'Zagreb');
-    const luxembourgJobs = await fetchJobsForRegion('Luxembourg', 'luxembourg engineer developer', 'Luxembourg City');
-    const germanyJobs = await fetchJobsForRegion('Germany', 'germany CNC welder technician', 'Berlin');
-    const austriaJobs = await fetchJobsForRegion('Austria', 'austria engineer welder', 'Vienna');
-    const nzJobs = await fetchJobsForRegion('New Zealand', 'new zealand welder technician', 'Auckland');
-    const polandJobs = await fetchJobsForRegion('Poland', 'poland welder machinist operator', 'Warsaw');
-    const romaniaJobs = await fetchJobsForRegion('Romania', 'romania welder mechanic technician', 'Bucharest');
-    const japanJobs = await fetchJobsForRegion('Japan', 'japan engineer technician operator', 'Tokyo');
-    const ukJobs = await fetchJobsForRegion('United Kingdom', 'uk welder engineer technician', 'London');
-    const singaporeJobs = await fetchJobsForRegion('Singapore', 'singapore engineer technician machinist', 'Singapore');
-    const australiaJobs = await fetchJobsForRegion('Australia', 'australia welder engineer technician', 'Sydney');
-    const switzerlandJobs = await fetchJobsForRegion('Switzerland', 'switzerland engineer technician specialist', 'Zurich');
-    const spainJobs = await fetchJobsForRegion('Spain', 'spain engineer technician developer', 'Madrid');
-    const southKoreaJobs = await fetchJobsForRegion('South Korea', 'korea technician operator engineer', 'Seoul');
-    const portugalJobs = await fetchJobsForRegion('Portugal', 'portugal engineer developer technician', 'Lisbon');
-    
-    // New High-Volume Additions:
-    const saudiJobs = await fetchJobsForRegion('Saudi Arabia', 'saudi engineer technician operator', 'Riyadh');
-    const qatarJobs = await fetchJobsForRegion('Qatar', 'qatar engineer technician mechanic', 'Doha');
-    const kuwaitJobs = await fetchJobsForRegion('Kuwait', 'kuwait engineer technician driver', 'Kuwait City');
-    const taiwanJobs = await fetchJobsForRegion('Taiwan', 'taiwan technician engineer operator', 'Taipei');
-    const malaysiaJobs = await fetchJobsForRegion('Malaysia', 'malaysia engineer technician operator', 'Kuala Lumpur');
-
-    const allJobs = [
-      ...swedenJobs, ...finlandJobs, ...irelandJobs, ...scotlandJobs, ...canadaJobs,
-      ...hungaryJobs, ...czechJobs, ...slovakiaJobs, ...croatiaJobs, ...luxembourgJobs,
-      ...germanyJobs, ...austriaJobs, ...nzJobs, ...polandJobs, ...romaniaJobs, 
-      ...japanJobs, ...ukJobs, ...singaporeJobs, ...australiaJobs, ...switzerlandJobs, 
-      ...spainJobs, ...southKoreaJobs, ...portugalJobs,
-      ...saudiJobs, ...qatarJobs, ...kuwaitJobs, ...taiwanJobs, ...malaysiaJobs
+    // 28 Target Countries List
+    const targetCountries = [
+      { name: 'Sweden', query: 'welder cnc engineer', city: 'Stockholm' },
+      { name: 'Finland', query: 'welder machinist technician', city: 'Helsinki' },
+      { name: 'Ireland', query: 'engineer technician operator', city: 'Dublin' },
+      { name: 'Scotland', query: 'welder engineer technician', city: 'Glasgow' },
+      { name: 'Canada', query: 'welder technician machinist', city: 'Toronto' },
+      { name: 'Hungary', query: 'engineer operator technician', city: 'Budapest' },
+      { name: 'Czech Republic', query: 'welder machinist operator', city: 'Prague' },
+      { name: 'Slovakia', query: 'technician assembly operator', city: 'Bratislava' },
+      { name: 'Croatia', query: 'technician mechanic operator', city: 'Zagreb' },
+      { name: 'Luxembourg', query: 'engineer developer technician', city: 'Luxembourg City' },
+      { name: 'Germany', query: 'CNC welder technician', city: 'Berlin' },
+      { name: 'Austria', query: 'engineer welder technician', city: 'Vienna' },
+      { name: 'New Zealand', query: 'welder technician machinist', city: 'Auckland' },
+      { name: 'Poland', query: 'welder machinist operator', city: 'Warsaw' },
+      { name: 'Romania', query: 'welder mechanic technician', city: 'Bucharest' },
+      { name: 'Japan', query: 'engineer technician operator', city: 'Tokyo' },
+      { name: 'United Kingdom', query: 'welder engineer technician', city: 'London' },
+      { name: 'Singapore', query: 'engineer technician machinist', city: 'Singapore' },
+      { name: 'Australia', query: 'welder engineer technician', city: 'Sydney' },
+      { name: 'Switzerland', query: 'engineer technician specialist', city: 'Zurich' },
+      { name: 'Spain', query: 'engineer technician developer', city: 'Madrid' },
+      { name: 'South Korea', query: 'technician operator engineer', city: 'Seoul' },
+      { name: 'Portugal', query: 'engineer developer technician', city: 'Lisbon' },
+      { name: 'Saudi Arabia', query: 'engineer technician operator', city: 'Riyadh' },
+      { name: 'Qatar', query: 'engineer technician mechanic', city: 'Doha' },
+      { name: 'Kuwait', query: 'engineer technician driver', city: 'Kuwait City' },
+      { name: 'Taiwan', query: 'technician engineer operator', city: 'Taipei' },
+      { name: 'Malaysia', query: 'engineer technician operator', city: 'Kuala Lumpur' }
     ];
+
+    let allJobs = [];
+    for (const target of targetCountries) {
+      const jobs = await fetchJobsForRegion(target.name, target.query, target.city);
+      allJobs.push(...jobs);
+    }
 
     if (allJobs.length === 0) {
       console.log('No jobs found.');
