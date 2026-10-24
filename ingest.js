@@ -46,7 +46,7 @@ async function fetchJobsForRegion(countryName, searchQuery, defaultCity) {
 // MAIN INGESTION PIPELINE
 async function runIngestionPipeline() {
   try {
-    // 33 Target Countries List
+    // 38 Target Countries List
     const targetCountries = [
       { name: 'Sweden', query: 'welder cnc engineer', city: 'Stockholm' },
       { name: 'Finland', query: 'welder machinist technician', city: 'Helsinki' },
@@ -76,13 +76,18 @@ async function runIngestionPipeline() {
       { name: 'Kuwait', query: 'engineer technician driver', city: 'Kuwait City' },
       { name: 'Taiwan', query: 'technician engineer operator', city: 'Taipei' },
       { name: 'Malaysia', query: 'engineer technician operator', city: 'Kuala Lumpur' },
-      
-      // 5 New Additions
       { name: 'Belgium', query: 'engineer technician operator', city: 'Brussels' },
       { name: 'Norway', query: 'engineer welder technician', city: 'Oslo' },
       { name: 'Denmark', query: 'engineer technician machinist', city: 'Copenhagen' },
       { name: 'United Arab Emirates', query: 'engineer technician mechanic', city: 'Dubai' },
-      { name: 'Oman', query: 'engineer technician operator', city: 'Muscat' }
+      { name: 'Oman', query: 'engineer technician operator', city: 'Muscat' },
+
+      // 5 New Additions
+      { name: 'Netherlands', query: 'engineer technician developer', city: 'Amsterdam' },
+      { name: 'Lithuania', query: 'welder machinist driver', city: 'Vilnius' },
+      { name: 'Estonia', query: 'engineer technician developer', city: 'Tallinn' },
+      { name: 'Malta', query: 'technician engineer specialist', city: 'Valletta' },
+      { name: 'Bahrain', query: 'engineer technician mechanic', city: 'Manama' }
     ];
 
     let allJobs = [];
@@ -96,7 +101,7 @@ async function runIngestionPipeline() {
       return;
     }
 
-    console.log(`Appending ${allJobs.length} jobs across 33 target countries to Google Sheet...`);
+    console.log(`Appending ${allJobs.length} jobs across 38 target countries to Google Sheet...`);
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
@@ -105,7 +110,7 @@ async function runIngestionPipeline() {
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: allJobs },
     });
-    console.log('Successfully updated sheet with 33 target countries!');
+    console.log('Successfully updated sheet with 38 target countries!');
   } catch (error) {
     console.error('Pipeline error:', error.message);
   }
