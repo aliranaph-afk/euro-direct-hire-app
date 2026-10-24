@@ -12,85 +12,32 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
-// FETCH FROM SWEDEN
-async function fetchSwedenJobs() {
-  console.log('Fetching live jobs from Sweden...');
+// GENERIC COUNTRY FETCH HELPER
+async function fetchJobsForCountry(countryName, searchQuery, defaultCity) {
+  console.log(`Fetching live jobs from ${countryName}...`);
   try {
-    const response = await fetch('https://jobsearch.api.jobtechdev.se/search?q=welder%20cnc&limit=3');
+    const response = await fetch(`https://jobsearch.api.jobtechdev.se/search?q=${encodeURIComponent(searchQuery)}&limit=3`);
     const data = await response.json();
     const rows = [];
     for (const hit of data.hits || []) {
-      const employer = hit.employer?.name || 'Swedish Direct Employer';
+      const employer = hit.employer?.name || `${countryName} Direct Employer`;
       if (/bemanning|staffing|manpower|adecco|randstad/i.test(employer)) continue;
+      
+      const isSkilled = /cnc|welder|engineer|machinist|technician/i.test(hit.headline);
       rows.push([
-        hit.headline, 'Sweden', hit.workplace_address?.municipality || 'Sweden', 
-        employer, /cnc|welder/i.test(hit.headline) ? 'Priority 2' : 'Priority 1', 
-        hit.webpage_url, 'S1', /cnc|welder/i.test(hit.headline) ? 'MWO Direct-Hire Exemption (Max 5)' : 'Requires DMW-Accredited PRA'
+        hit.headline, 
+        countryName, 
+        hit.workplace_address?.municipality || defaultCity, 
+        employer, 
+        isSkilled ? 'Priority 2' : 'Priority 1', 
+        hit.webpage_url, 
+        'S1', 
+        isSkilled ? 'MWO Direct-Hire Exemption (Max 5)' : 'Requires DMW-Accredited PRA'
       ]);
     }
     return rows;
   } catch (err) {
-    console.error('Sweden error:', err.message);
-    return [];
-  }
-}
-
-// FETCH FROM DENMARK
-async function fetchDenmarkJobs() {
-  console.log('Fetching live jobs from Denmark...');
-  try {
-    const response = await fetch('https://jobsearch.api.jobtechdev.se/search?q=denmark%20welder%20cnc&limit=3');
-    const data = await response.json();
-    const rows = [];
-    for (const hit of data.hits || []) {
-      rows.push([
-        hit.headline, 'Denmark', 'Copenhagen', 
-        hit.employer?.name || 'Danish Direct Employer', 'Priority 2', 
-        hit.webpage_url, 'S1', 'MWO Direct-Hire Exemption (Max 5)'
-      ]);
-    }
-    return rows;
-  } catch (err) {
-    return [];
-  }
-}
-
-// FETCH FROM NORWAY
-async function fetchNorwayJobs() {
-  console.log('Fetching live jobs from Norway...');
-  try {
-    const response = await fetch('https://jobsearch.api.jobtechdev.se/search?q=norway%20welder%20engineer&limit=3');
-    const data = await response.json();
-    const rows = [];
-    for (const hit of data.hits || []) {
-      rows.push([
-        hit.headline, 'Norway', 'Oslo', 
-        hit.employer?.name || 'Norwegian Direct Employer', 'Priority 2', 
-        hit.webpage_url, 'S1', 'MWO Direct-Hire Exemption (Max 5)'
-      ]);
-    }
-    return rows;
-  } catch (err) {
-    return [];
-  }
-}
-
-// FETCH FROM FINLAND
-async function fetchFinlandJobs() {
-  console.log('Fetching live jobs from Finland...');
-  try {
-    const response = await fetch('https://jobsearch.api.jobtechdev.se/search?q=finland%20welder%20machinist&limit=3');
-    const data = await response.json();
-    const rows = [];
-    for (const hit of data.hits || []) {
-      rows.push([
-        hit.headline, 'Finland', 'Helsinki', 
-        hit.employer?.name || 'Finnish Direct Employer', 'Priority 2', 
-        hit.webpage_url, 'S1', 'MWO Direct-Hire Exemption (Max 5)'
-      ]);
-    }
-    return rows;
-  } catch (err) {
+    console.error(`${countryName} error:`, err.message);
     return [];
   }
 }
@@ -98,12 +45,22 @@ async function fetchFinlandJobs() {
 // MAIN INGESTION PIPELINE
 async function runIngestionPipeline() {
   try {
-    const swedenJobs = await fetchSwedenJobs();
-    const denmarkJobs = await fetchDenmarkJobs();
-    const norwayJobs = await fetchNorwayJobs();
-    const finlandJobs = await fetchFinlandJobs();
+    // Fetching across 6 European countries
+    const swedenJobs = await fetchJobsForCountry('Sweden', 'welder cnc', 'Sweden');
+    const denmarkJobs = await fetchJobsForCountry('Denmark', 'denmark welder cnc', 'Copenhagen');
+    const norwayJobs = await fetchJobsForCountry('Norway', 'norway welder engineer', 'Oslo');
+    const finlandJobs = await fetchJobsForCountry('Finland', 'finland welder machinist', 'Helsinki');
+    const icelandJobs = await fetchJobsForCountry('Iceland', 'iceland welder mechanic', 'Reykjavik');
+    const netherlandsJobs = await fetchJobsForCountry('Netherlands', 'netherlands engineer technician', 'Amsterdam');
 
-    const allJobs = [...swedenJobs, ...denmarkJobs, ...norwayJobs, ...finlandJobs];
+    const allJobs = [
+      ...swedenJobs, 
+      ...denmarkJobs, 
+      ...norwayJobs, 
+      ...finlandJobs, 
+      ...icelandJobs, 
+      ...netherlandsJobs
+    ];
 
     if (allJobs.length === 0) {
       console.log('No jobs found.');
@@ -119,7 +76,7 @@ async function runIngestionPipeline() {
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: allJobs },
     });
-    console.log('Successfully updated sheet with multi-country data!');
+    console.log('Successfully updated sheet with expanded multi-country data!');
   } catch (error) {
     console.error('Pipeline error:', error.message);
   }
