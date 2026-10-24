@@ -24,7 +24,7 @@ async function fetchJobsForRegion(countryName, searchQuery, defaultCity) {
       const employer = hit.employer?.name || `${countryName} Direct Employer`;
       if (/bemanning|staffing|manpower|adecco|randstad/i.test(employer)) continue;
       
-      const isSkilled = /cnc|welder|engineer|machinist|technician|developer|mechanic|operator|electrician/i.test(hit.headline);
+      const isSkilled = /cnc|welder|engineer|machinist|technician|developer|mechanic|operator|electrician|driver/i.test(hit.headline);
       rows.push([
         hit.headline, 
         countryName, 
@@ -46,7 +46,7 @@ async function fetchJobsForRegion(countryName, searchQuery, defaultCity) {
 // MAIN INGESTION PIPELINE
 async function runIngestionPipeline() {
   try {
-    // 23 Target Countries Pipeline
+    // 28 Target Countries Pipeline
     const swedenJobs = await fetchJobsForRegion('Sweden', 'welder cnc', 'Sweden');
     const finlandJobs = await fetchJobsForRegion('Finland', 'finland welder machinist', 'Helsinki');
     const irelandJobs = await fetchJobsForRegion('Ireland', 'ireland engineer technician', 'Dublin');
@@ -65,20 +65,26 @@ async function runIngestionPipeline() {
     const japanJobs = await fetchJobsForRegion('Japan', 'japan engineer technician operator', 'Tokyo');
     const ukJobs = await fetchJobsForRegion('United Kingdom', 'uk welder engineer technician', 'London');
     const singaporeJobs = await fetchJobsForRegion('Singapore', 'singapore engineer technician machinist', 'Singapore');
-    
-    // New Additions:
     const australiaJobs = await fetchJobsForRegion('Australia', 'australia welder engineer technician', 'Sydney');
     const switzerlandJobs = await fetchJobsForRegion('Switzerland', 'switzerland engineer technician specialist', 'Zurich');
     const spainJobs = await fetchJobsForRegion('Spain', 'spain engineer technician developer', 'Madrid');
     const southKoreaJobs = await fetchJobsForRegion('South Korea', 'korea technician operator engineer', 'Seoul');
     const portugalJobs = await fetchJobsForRegion('Portugal', 'portugal engineer developer technician', 'Lisbon');
+    
+    // New High-Volume Additions:
+    const saudiJobs = await fetchJobsForRegion('Saudi Arabia', 'saudi engineer technician operator', 'Riyadh');
+    const qatarJobs = await fetchJobsForRegion('Qatar', 'qatar engineer technician mechanic', 'Doha');
+    const kuwaitJobs = await fetchJobsForRegion('Kuwait', 'kuwait engineer technician driver', 'Kuwait City');
+    const taiwanJobs = await fetchJobsForRegion('Taiwan', 'taiwan technician engineer operator', 'Taipei');
+    const malaysiaJobs = await fetchJobsForRegion('Malaysia', 'malaysia engineer technician operator', 'Kuala Lumpur');
 
     const allJobs = [
       ...swedenJobs, ...finlandJobs, ...irelandJobs, ...scotlandJobs, ...canadaJobs,
       ...hungaryJobs, ...czechJobs, ...slovakiaJobs, ...croatiaJobs, ...luxembourgJobs,
       ...germanyJobs, ...austriaJobs, ...nzJobs, ...polandJobs, ...romaniaJobs, 
-      ...japanJobs, ...ukJobs, ...singaporeJobs,
-      ...australiaJobs, ...switzerlandJobs, ...spainJobs, ...southKoreaJobs, ...portugalJobs
+      ...japanJobs, ...ukJobs, ...singaporeJobs, ...australiaJobs, ...switzerlandJobs, 
+      ...spainJobs, ...southKoreaJobs, ...portugalJobs,
+      ...saudiJobs, ...qatarJobs, ...kuwaitJobs, ...taiwanJobs, ...malaysiaJobs
     ];
 
     if (allJobs.length === 0) {
@@ -86,7 +92,7 @@ async function runIngestionPipeline() {
       return;
     }
 
-    console.log(`Appending ${allJobs.length} jobs across 23 target countries to Google Sheet...`);
+    console.log(`Appending ${allJobs.length} jobs across 28 target countries to Google Sheet...`);
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
@@ -95,7 +101,7 @@ async function runIngestionPipeline() {
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: allJobs },
     });
-    console.log('Successfully updated sheet with 23 target countries!');
+    console.log('Successfully updated sheet with 28 target countries!');
   } catch (error) {
     console.error('Pipeline error:', error.message);
   }
