@@ -14,7 +14,7 @@ async function getSheetsClient() {
 
 // 2. FETCH FROM SWEDEN (JOBTECH DEV API)
 async function fetchSwedenJobs() {
-  console.log('Fetching live jobs from Sweden (JobTech Dev API)...');
+  console.log('Fetching live jobs from Sweden...');
   try {
     const response = await fetch('https://jobsearch.api.jobtechdev.se/search?q=english%20welder%20cnc&limit=10');
     const data = await response.json();
@@ -22,7 +22,6 @@ async function fetchSwedenJobs() {
     const extractedRows = [];
     for (const hit of data.hits || []) {
       const employer = hit.employer?.name || 'Swedish Direct Employer';
-      // Filter out staffing/placement agencies
       if (/bemanning|staffing|manpower|adecco|randstad/i.test(employer)) continue;
 
       const title = hit.headline;
@@ -34,9 +33,7 @@ async function fetchSwedenJobs() {
       const priorityTier = isSkilled ? 'Priority 2' : 'Priority 1';
       const dmwNotice = isSkilled ? 'MWO Direct-Hire Exemption (Max 5)' : 'Requires DMW-Accredited PRA';
 
-      extractedRows.push([
-        title, country, city, employer, priorityTier, applyUrl, 'S1', dmwNotice
-      ]);
+      extractedRows.push([title, country, city, employer, priorityTier, applyUrl, 'S1', dmwNotice]);
     }
     return extractedRows;
   } catch (err) {
@@ -45,45 +42,47 @@ async function fetchSwedenJobs() {
   }
 }
 
-// 3. FETCH FROM BELGIUM (VDAB OPEN SERVICES)
-async function fetchBelgiumJobs() {
-  console.log('Fetching live jobs from Belgium (VDAB Public API)...');
+// 3. FETCH FROM GERMANY (ARBEITSAGENTUR OPEN API)
+async function fetchGermanyJobs() {
+  console.log('Fetching live jobs from Germany...');
   try {
-    const response = await fetch('https://developer.vdab.be/openservices/vacatures/v1/vacatures?trefwoord=technician%20cnc%20welder&limit=10');
+    // Public German Federal Employment Agency job search endpoint
+    const response = await fetch('https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs?was=welder%20cnc%20engineer&pro=0&bezirk=0', {
+      headers: { 'Accept': 'application/json', 'X-API-Key': 'jobboerse-jobsuche' }
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
     const data = await response.json();
     const extractedRows = [];
 
-    for (const job of data.vacatures || data.results || []) {
-      const employer = job.werkgever?.naam || job.companyName || 'Belgian Direct Employer';
-      if (/interim|staffing|manpower|adecco|randstad/i.test(employer)) continue;
+    for (const job of data.stellenangebote || []) {
+      const employer = job.arbeitgeber || 'German Direct Employer';
+      if (/zeitarbeit|personaldienstleistung|manpower|randstad/i.test(employer)) continue;
 
-      const title = job.titel || job.title;
-      const country = 'Belgium';
-      const city = job.locatie?.gemeente || 'Flanders';
-      const applyUrl = job.links?.solliciteerUrl || job.url || 'https://www.vdab.be/vindicat/vacatures';
+      const title = job.beruf;
+      const country = 'Germany';
+      const city = job.arbeitsort?.ort || 'Germany';
+      const applyUrl = `https://www.arbeitsagentur.de/jobsuche/jobdetail/${job.refnr}`;
 
-      const isSkilled = /cnc|welder|machinist|technician|electrician|engineer/i.test(title);
+      const isSkilled = /cnc|welder|schweisser|mechaniker|ingenieur/i.test(title);
       const priorityTier = isSkilled ? 'Priority 2' : 'Priority 1';
       const dmwNotice = isSkilled ? 'MWO Direct-Hire Exemption (Max 5)' : 'Requires DMW-Accredited PRA';
 
-      extractedRows.push([
-        title, country, city, employer, priorityTier, applyUrl, 'S1', dmwNotice
-      ]);
+      extractedRows.push([title, country, city, employer, priorityTier, applyUrl, 'S1', dmwNotice]);
     }
     return extractedRows;
   } catch (err) {
-    console.log('Belgium (VDAB) skipped (endpoint offline or key pending).');
+    console.log('Germany fetch skipped or rate-limited, continuing...');
     return [];
   }
 }
 
-// 4. FETCH FROM FRANCE (FRANCE TRAVAIL / PÔLE EMPLOI)
-async function fetchFranceJobs() {
-  console.log('Fetching live jobs from France (France Travail Open Data)...');
+// 4. FETCH FROM NORWAY (NAV / ARBEIDSPLASSEN API)
+async function fetchNorwayJobs() {
+  console.log('Fetching live jobs from Norway...');
   try {
-    const response = await fetch('https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?motsCles=soudure%20usinage%20maintenance&range=0-9', {
+    // Norwegian Labour and Welfare Administration (NAV) public API
+    const response = await fetch('https://arbeidsplassen.nav.no/public-api/stillinger?q=welder%20cnc%20engineer&size=10', {
       headers: { 'Accept': 'application/json' }
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -91,26 +90,24 @@ async function fetchFranceJobs() {
     const data = await response.json();
     const extractedRows = [];
 
-    for (const item of data.resultats || []) {
-      const employer = item.entreprise?.nom || 'French Employer';
-      if (/interim|adecco|manpower|randstad|crit/i.test(employer)) continue;
+    for (const job of data.content || data.hits || []) {
+      const employer = job.businessName || job.employer?.name || 'Norwegian Direct Employer';
+      if (/bemanning|bemanningsbyrå|adecco|manpower/i.test(employer)) continue;
 
-      const title = item.intitule;
-      const country = 'France';
-      const city = item.lieuTravail?.libelle || 'France';
-      const applyUrl = item.origineOffre?.url || 'https://candidat.francetravail.fr';
+      const title = job.title;
+      const country = 'Norway';
+      const city = job.municipal || 'Norway';
+      const applyUrl = job.sourceurl || `https://arbeidsplassen.nav.no/stillinger/stilling/${job.id}`;
 
-      const isSkilled = /soud|usinag|technicien|mecanicien|ingenieur/i.test(title);
+      const isSkilled = /cnc|sveiser|welder|engineer|tekniker/i.test(title);
       const priorityTier = isSkilled ? 'Priority 2' : 'Priority 1';
       const dmwNotice = isSkilled ? 'MWO Direct-Hire Exemption (Max 5)' : 'Requires DMW-Accredited PRA';
 
-      extractedRows.push([
-        title, country, city, employer, priorityTier, applyUrl, 'S1', dmwNotice
-      ]);
+      extractedRows.push([title, country, city, employer, priorityTier, applyUrl, 'S1', dmwNotice]);
     }
     return extractedRows;
   } catch (err) {
-    console.log('France Travail skipped (OAuth client credentials pending).');
+    console.log('Norway fetch skipped, continuing...');
     return [];
   }
 }
@@ -119,10 +116,10 @@ async function fetchFranceJobs() {
 async function runIngestionPipeline() {
   try {
     const swedenJobs = await fetchSwedenJobs();
-    const belgiumJobs = await fetchBelgiumJobs();
-    const franceJobs = await fetchFranceJobs();
+    const germanyJobs = await fetchGermanyJobs();
+    const norwayJobs = await fetchNorwayJobs();
     
-    const allExtractedJobs = [...swedenJobs, ...belgiumJobs, ...franceJobs];
+    const allExtractedJobs = [...swedenJobs, ...germanyJobs, ...norwayJobs];
 
     if (allExtractedJobs.length === 0) {
       console.log('No new jobs extracted in this cycle.');
@@ -137,12 +134,10 @@ async function runIngestionPipeline() {
       range: 'Job_Listings!A:H',
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
-      requestBody: {
-        values: allExtractedJobs,
-      },
+      requestBody: { values: allExtractedJobs },
     });
 
-    console.log('Successfully updated database!');
+    console.log('Successfully updated database with multi-country listings!');
   } catch (error) {
     console.error('Error during ingestion pipeline:', error.message);
   }
