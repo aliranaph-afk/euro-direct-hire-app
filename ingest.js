@@ -1,14 +1,32 @@
+require('dotenv').config();
 const { google } = require('googleapis');
 
 // 1. CONFIGURATION
 const SPREADSHEET_ID = '18GaEB6pzvl_5IWgNeRjF60Y2K6XP0yUximKXoVVuCKk';
-const SERVICE_ACCOUNT_FILE = './service_account.json';
 
 async function getSheetsClient() {
+  const secretString = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+
+  if (!secretString) {
+    throw new Error(
+      'Missing GOOGLE_SERVICE_ACCOUNT_KEY environment variable. ' +
+      'Please verify your local .env file or GitHub Actions Repository Secrets.'
+    );
+  }
+
+  let credentials;
+  try {
+    // Parse the raw JSON secret string safely
+    credentials = JSON.parse(secretString);
+  } catch (err) {
+    throw new Error('Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY JSON string: ' + err.message);
+  }
+
   const auth = new google.auth.GoogleAuth({
-    keyFile: SERVICE_ACCOUNT_FILE,
+    credentials,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
+
   return google.sheets({ version: 'v4', auth });
 }
 
