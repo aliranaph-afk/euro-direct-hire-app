@@ -46,7 +46,7 @@ async function fetchJobsForRegion(countryName, searchQuery, defaultCity) {
 // MAIN INGESTION PIPELINE
 async function runIngestionPipeline() {
   try {
-    // 88 Target Countries List
+    // 108 Target Countries List
     const targetCountries = [
       { name: 'Sweden', query: 'welder cnc engineer', city: 'Stockholm' },
       { name: 'Finland', query: 'welder machinist technician', city: 'Helsinki' },
@@ -131,13 +131,33 @@ async function runIngestionPipeline() {
       { name: 'Uruguay', query: 'developer engineer specialist', city: 'Montevideo' },
       { name: 'Dominican Republic', query: 'technician engineer operator', city: 'Santo Domingo' },
       { name: 'Jamaica', query: 'technician engineer operator', city: 'Kingston' },
-
-      // 5 New European Additions (88 Total)
       { name: 'Serbia', query: 'welder machinist technician engineer', city: 'Belgrade' },
       { name: 'Bosnia and Herzegovina', query: 'technician welder operator', city: 'Sarajevo' },
       { name: 'North Macedonia', query: 'technician engineer operator', city: 'Skopje' },
       { name: 'Montenegro', query: 'engineer technician mechanic', city: 'Podgorica' },
-      { name: 'Albania', query: 'engineer technician mechanic', city: 'Tirana' }
+      { name: 'Albania', query: 'engineer technician mechanic', city: 'Tirana' },
+
+      // 20 New European Additions (108 Total)
+      { name: 'Switzerland Pharma Hub', query: 'engineer technician specialist', city: 'Basel' },
+      { name: 'Austria Auto Hub', query: 'engineer mechanic technician', city: 'Graz' },
+      { name: 'Germany Industrial South', query: 'CNC engineer technician', city: 'Stuttgart' },
+      { name: 'Belgium Flanders Port', query: 'operator technician engineer', city: 'Antwerp' },
+      { name: 'Netherlands Brainport', query: 'developer engineer technician', city: 'Eindhoven' },
+      { name: 'Spain Industrial North', query: 'welder engineer technician', city: 'Bilbao' },
+      { name: 'Italy Industrial North', query: 'machinist technician engineer', city: 'Milan' },
+      { name: 'Poland Silesian Hub', query: 'welder operator mechanic', city: 'Katowice' },
+      { name: 'Czechia Moravia Hub', query: 'machinist operator technician', city: 'Ostrava' },
+      { name: 'Slovakia Auto Hub', query: 'assembler technician operator', city: 'Trnava' },
+      { name: 'Romania Transylvania Hub', query: 'developer engineer technician', city: 'Cluj-Napoca' },
+      { name: 'Bulgaria Maritime Hub', query: 'technician engineer operator', city: 'Varna' },
+      { name: 'Lithuania Industrial Center', query: 'driver technician operator', city: 'Kaunas' },
+      { name: 'Estonia Tech Center', query: 'developer engineer specialist', city: 'Tartu' },
+      { name: 'Croatia Coastal Logistics', query: 'welder mechanic operator', city: 'Split' },
+      { name: 'Greece Maritime Hub', query: 'engineer technician specialist', city: 'Piraeus' },
+      { name: 'Portugal Industrial North', query: 'developer engineer technician', city: 'Porto' },
+      { name: 'Ireland Midwest Corridor', query: 'technician engineer machinist', city: 'Limerick' },
+      { name: 'Finland Tech North', query: 'engineer technician developer', city: 'Oulu' },
+      { name: 'Sweden West Coast Belt', query: 'engineer technician mechanic', city: 'Gothenburg' }
     ];
 
     let allJobs = [];
@@ -151,7 +171,7 @@ async function runIngestionPipeline() {
       return;
     }
 
-    console.log(`Appending ${allJobs.length} jobs across 88 target countries/regions to Google Sheet...`);
+    console.log(`Appending ${allJobs.length} jobs across 108 target countries/regions to Google Sheet...`);
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
@@ -160,7 +180,7 @@ async function runIngestionPipeline() {
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: allJobs },
     });
-    console.log('Successfully updated sheet with 88 target countries/regions!');
+    console.log('Successfully updated sheet with 108 target countries/regions!');
   } catch (error) {
     console.error('Pipeline error:', error.message);
   }
