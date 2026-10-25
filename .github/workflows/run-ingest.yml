@@ -2,7 +2,7 @@ name: Run Ingest Script
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Runs every day at midnight UTC (8:00 AM PHT)
+    - cron: '0 0 * * *' # Every day at 8:00 AM PHT
   workflow_dispatch:
 
 jobs:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -24,3 +24,24 @@ jobs:
         env:
           GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
         run: node ingest.js
+
+      - name: Send Email Notification
+        if: always() # Ensures notification sends whether job succeeded or failed
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "Ingestion Pipeline Status: ${{ job.status }} (${{ github.date }})"
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: GitHub Actions Workflow
+          body: |
+            The Daily Job Ingestion Pipeline has finished executing.
+
+            Status: ${{ job.status }}
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+
+            View run logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
