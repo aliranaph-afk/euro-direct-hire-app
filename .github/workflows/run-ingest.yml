@@ -1,33 +1,27 @@
-name: Run Direct-Hire Job Ingestion
+name: Run Ingest Script
 
 on:
   schedule:
-    - cron: '0 2 * * *'
-  workflow_dispatch:
+    - cron: '0 0 * * *' # Runs daily at midnight
+  workflow_dispatch:     # Allows manual trigger
 
 jobs:
-  ingest:
+  run-ingest:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Write service account key
+      - name: Execute ingestion script
         env:
-          GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
-        run: |
-          test -n "$GCP_SERVICE_ACCOUNT_JSON" || { echo "GCP_SERVICE_ACCOUNT_JSON secret is not set"; exit 1; }
-          printf '%s' "$GCP_SERVICE_ACCOUNT_JSON" > service_account.json
-
-      - name: Run ingestion pipeline
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
         run: node ingest.js
