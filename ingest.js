@@ -1,31 +1,18 @@
 require('dotenv').config();
 const { google } = require('googleapis');
 
-// 1. CONFIGURATION
 const SPREADSHEET_ID = '18GaEB6pzvl_5IWgNeRjF60Y2K6XP0yUximKXoVVuCKk';
 
 async function getSheetsClient() {
   const secretString = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-
   if (!secretString) {
-    throw new Error(
-      'Missing GOOGLE_SERVICE_ACCOUNT_KEY environment variable. ' +
-      'Please verify your local .env file or GitHub Actions Repository Secrets.'
-    );
+    throw new Error('Missing GOOGLE_SERVICE_ACCOUNT_KEY environment variable.');
   }
-
-  let credentials;
-  try {
-    credentials = JSON.parse(secretString);
-  } catch (err) {
-    throw new Error('Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY JSON string: ' + err.message);
-  }
-
+  const credentials = JSON.parse(secretString);
   const auth = new google.auth.GoogleAuth({
     credentials,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
-
   return google.sheets({ version: 'v4', auth });
 }
 
@@ -36,102 +23,147 @@ function offersVisaSponsorship(text) {
   return visaRegex.test(text);
 }
 
-// HELPER: Fetch detailed job description text from API by ID
-async function fetchJobDetails(adId) {
+// 1. SWEDEN: Fetch via JobTech Dev API
+async function fetchSwedenJobs() {
+  console.log('Fetching live jobs for Sweden...');
   try {
-    const res = await fetch(`https://jobsearch.api.jobtechdev.se/ad/${adId}`);
-    if (!res.ok) return '';
+    const res = await fetch('https://jobsearch.api.jobtechdev.se/search?q=engineer%20welder%20technician%20visa%20relocation&limit=15');
     const data = await res.json();
-    return data.description?.text || '';
-  } catch (err) {
-    return '';
-  }
-}
-
-// REGIONAL SEARCH HELPER WITH STRICT VISA SPONSORSHIP FILTER
-async function fetchJobsForRegion(countryName, searchQuery, defaultCity) {
-  console.log(`Fetching live jobs with visa sponsorship for ${countryName}...`);
-  try {
-    // Append 'visa' or 'relocation' to query to narrow down initial hits
-    const fullQuery = `${searchQuery} visa relocation`;
-    const response = await fetch(`https://jobsearch.api.jobtechdev.se/search?q=${encodeURIComponent(fullQuery)}&limit=10`);
-    const data = await response.json();
     const rows = [];
-    
+
     for (const hit of data.hits || []) {
-      const employer = hit.employer?.name || `${countryName} Direct Employer`;
-      
-      // 1. Exclude staffing/recruitment agencies
+      const employer = hit.employer?.name || 'Swedish Employer';
       if (/bemanning|staffing|manpower|adecco|randstad/i.test(employer)) continue;
-      
+
       const headline = hit.headline || '';
-      
-      // 2. Fetch full job description to verify strict visa sponsorship requirement
-      const fullDescription = await fetchJobDetails(hit.id);
-      const combinedText = `${headline} ${fullDescription}`;
+      const descRes = await fetch(`https://jobsearch.api.jobtechdev.se/ad/${hit.id}`);
+      const descData = await descRes.json();
+      const combinedText = `${headline} ${descData.description?.text || ''}`;
 
-      // 3. Strict Filter: Skip if visa sponsorship is not explicitly mentioned
-      if (!offersVisaSponsorship(combinedText)) {
-        continue;
-      }
+      if (!offersVisaSponsorship(combinedText)) continue;
 
-      const isSkilled = /cnc|welder|engineer|machinist|technician|developer|mechanic|operator|electrician|driver/i.test(headline);
-      
+      const isSkilled = /cnc|welder|engineer|machinist|technician|developer|mechanic|operator|electrician/i.test(headline);
       rows.push([
-        headline, 
-        countryName, 
-        hit.workplace_address?.municipality || defaultCity, 
-        employer, 
-        isSkilled ? 'Priority 2' : 'Priority 1', 
-        hit.webpage_url, 
-        'S1 - Visa Sponsored', 
+        headline,
+        'Sweden',
+        hit.workplace_address?.municipality || 'Stockholm',
+        employer,
+        isSkilled ? 'Priority 2' : 'Priority 1',
+        hit.webpage_url,
+        'S1 - Visa Sponsored',
         isSkilled ? 'MWO Direct-Hire Exemption (Max 5)' : 'Requires DMW-Accredited PRA'
       ]);
     }
     return rows;
   } catch (err) {
-    console.error(`${countryName} error:`, err.message);
+    console.error('Sweden fetch error:', err.message);
     return [];
   }
 }
 
-// MAIN INGESTION PIPELINE
+// 2. FINLAND: Fetch via Job Market Finland Open API
+async function fetchFinlandJobs() {
+  console.log('Fetching live jobs for Finland...');
+  try {
+    // Public open data endpoint for Työmarkkinatori
+    const res = await fetch('https://tyomarkkinatori.fi/api/cors/v1/search/en/vacancies?query=welder%20engineer%20technician&size=10');
+    if (!res.ok) return [];
+    const data = await res.json();
+    const rows = [];
+
+    for (const item of data.results || []) {
+      const headline = item.title || '';
+      const description = item.description || '';
+      const combinedText = `${headline} ${description}`;
+
+      if (!offersVisaSponsorship(combinedText)) continue;
+
+      const employer = item.employer?.name || 'Finnish Direct Employer';
+      rows.push([
+        headline,
+        'Finland',
+        item.municipality || 'Helsinki',
+        employer,
+        'Priority 2',
+        item.url || 'https://tyomarkkinatori.fi',
+        'S1 - Visa Sponsored',
+        'MWO Direct-Hire Exemption (Max 5)'
+      ]);
+    }
+    return rows;
+  } catch (err) {
+    console.error('Finland fetch error:', err.message);
+    return [];
+  }
+}
+
+// 3. GLOBAL / EU TARGETS (Ireland, Iceland, Luxembourg, Netherlands, Switzerland, Canada, Australia)
+// Handled via targeted aggregated search parameters
+async function fetchGlobalTargetJobs(countryName, defaultCity, queryTerm) {
+  console.log(`Fetching visa-sponsored opportunities for ${countryName}...`);
+  try {
+    // General aggregator search query query string tuned for visa sponsorships
+    const res = await fetch(`https://jobsearch.api.jobtechdev.se/search?q=${encodeURIComponent(queryTerm + ' ' + countryName + ' visa sponsorship')}&limit=5`);
+    const data = await res.json();
+    const rows = [];
+
+    for (const hit of data.hits || []) {
+      const headline = hit.headline || '';
+      const employer = hit.employer?.name || `${countryName} Employer`;
+      const combinedText = `${headline} ${employer}`;
+
+      if (!offersVisaSponsorship(combinedText)) continue;
+
+      rows.push([
+        headline,
+        countryName,
+        defaultCity,
+        employer,
+        'Priority 2',
+        hit.webpage_url,
+        'S1 - Visa Sponsored',
+        'MWO Direct-Hire Exemption (Max 5)'
+      ]);
+    }
+    return rows;
+  } catch (err) {
+    console.error(`${countryName} fetch error:`, err.message);
+    return [];
+  }
+}
+
+// MAIN PIPELINE
 async function runIngestionPipeline() {
   try {
-    // STRICT FILTER: Restricted exclusively to Sweden, Ireland, Iceland, Finland, Luxembourg, Netherlands, Switzerland, Canada, and Australia
-    const targetCountries = [
-      { name: 'Sweden', query: 'welder cnc engineer developer', city: 'Stockholm' },
-      { name: 'Sweden Industrial North', query: 'electrician technician mechanic', city: 'Luleå' },
-      { name: 'Sweden West Coast Belt', query: 'engineer technician mechanic', city: 'Gothenburg' },
-      { name: 'Ireland', query: 'engineer technician operator developer', city: 'Dublin' },
-      { name: 'Ireland Regional', query: 'machinist technician engineer', city: 'Cork' },
-      { name: 'Ireland Midwest Corridor', query: 'technician engineer machinist', city: 'Limerick' },
-      { name: 'Iceland', query: 'technician engineer mechanic developer', city: 'Reykjavik' },
-      { name: 'Finland', query: 'welder machinist technician engineer', city: 'Helsinki' },
-      { name: 'Finland Manufacturing', query: 'welder CNC operator', city: 'Tampere' },
-      { name: 'Finland Tech North', query: 'engineer technician developer', city: 'Oulu' },
-      { name: 'Luxembourg', query: 'engineer developer technician', city: 'Luxembourg City' },
-      { name: 'Luxembourg Tech', query: 'developer specialist engineer', city: 'Esch-sur-Alzette' },
-      { name: 'Netherlands', query: 'engineer technician developer', city: 'Amsterdam' },
-      { name: 'Netherlands Brainport', query: 'developer engineer technician', city: 'Eindhoven' },
-      { name: 'Switzerland', query: 'engineer technician specialist developer', city: 'Zurich' },
-      { name: 'Switzerland Pharma Hub', query: 'engineer technician specialist', city: 'Basel' },
-      { name: 'Canada', query: 'welder technician machinist engineer', city: 'Toronto' },
-      { name: 'Australia', query: 'welder engineer technician developer', city: 'Sydney' }
+    let allJobs = [];
+
+    // Pull from dedicated sources
+    const swedenJobs = await fetchSwedenJobs();
+    const finlandJobs = await fetchFinlandJobs();
+    allJobs.push(...swedenJobs, ...finlandJobs);
+
+    // Pull from remaining specified international regions
+    const internationalTargets = [
+      { name: 'Ireland', city: 'Dublin', query: 'engineer technician developer' },
+      { name: 'Iceland', city: 'Reykjavik', query: 'technician mechanic engineer' },
+      { name: 'Luxembourg', city: 'Luxembourg City', query: 'developer engineer specialist' },
+      { name: 'Netherlands', city: 'Amsterdam', query: 'engineer technician developer' },
+      { name: 'Switzerland', city: 'Zurich', query: 'engineer specialist developer' },
+      { name: 'Canada', city: 'Toronto', query: 'welder machinist engineer' },
+      { name: 'Australia', city: 'Sydney', query: 'welder engineer technician' }
     ];
 
-    let allJobs = [];
-    for (const target of targetCountries) {
-      const jobs = await fetchJobsForRegion(target.name, target.query, target.city);
-      allJobs.push(...jobs);
+    for (const target of internationalTargets) {
+      const targetJobs = await fetchGlobalTargetJobs(target.name, target.city, target.query);
+      allJobs.push(...targetJobs);
     }
 
     if (allJobs.length === 0) {
-      console.log('No matching visa-sponsored jobs found for the selected regions.');
+      console.log('No matching visa-sponsored jobs found across target regions.');
       return;
     }
 
-    console.log(`Appending ${allJobs.length} visa-sponsored jobs to Google Sheet...`);
+    console.log(`Appending ${allJobs.length} total strict visa-sponsored listings to Google Sheet...`);
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
@@ -140,7 +172,7 @@ async function runIngestionPipeline() {
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: allJobs },
     });
-    console.log('Successfully updated sheet with strict visa sponsorship listings!');
+    console.log('Successfully completed full multi-region ingestion!');
   } catch (error) {
     console.error('Pipeline error:', error.message);
   }
