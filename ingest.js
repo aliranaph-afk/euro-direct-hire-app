@@ -23,7 +23,7 @@ function offersVisaSponsorship(text) {
   return visaRegex.test(text);
 }
 
-// 1. SWEDEN: Fetch via JobTech Dev API
+// 1. SWEDEN: Dedicated Fetch via JobTech Dev API
 async function fetchSwedenJobs() {
   console.log('Fetching live jobs for Sweden...');
   try {
@@ -61,11 +61,10 @@ async function fetchSwedenJobs() {
   }
 }
 
-// 2. FINLAND: Fetch via Job Market Finland Open API
+// 2. FINLAND: Dedicated Fetch via Job Market Finland Open API
 async function fetchFinlandJobs() {
   console.log('Fetching live jobs for Finland...');
   try {
-    // Public open data endpoint for Työmarkkinatori
     const res = await fetch('https://tyomarkkinatori.fi/api/cors/v1/search/en/vacancies?query=welder%20engineer%20technician&size=10');
     if (!res.ok) return [];
     const data = await res.json();
@@ -97,12 +96,10 @@ async function fetchFinlandJobs() {
   }
 }
 
-// 3. GLOBAL / EU TARGETS (Ireland, Iceland, Luxembourg, Netherlands, Switzerland, Canada, Australia)
-// Handled via targeted aggregated search parameters
-async function fetchGlobalTargetJobs(countryName, defaultCity, queryTerm) {
+// 3. EUROPEAN & INTERNATIONAL TARGETS AGGREGATOR
+async function fetchTargetJobs(countryName, defaultCity, queryTerm) {
   console.log(`Fetching visa-sponsored opportunities for ${countryName}...`);
   try {
-    // General aggregator search query query string tuned for visa sponsorships
     const res = await fetch(`https://jobsearch.api.jobtechdev.se/search?q=${encodeURIComponent(queryTerm + ' ' + countryName + ' visa sponsorship')}&limit=5`);
     const data = await res.json();
     const rows = [];
@@ -137,33 +134,79 @@ async function runIngestionPipeline() {
   try {
     let allJobs = [];
 
-    // Pull from dedicated sources
+    // Dedicated Source Calls
     const swedenJobs = await fetchSwedenJobs();
     const finlandJobs = await fetchFinlandJobs();
     allJobs.push(...swedenJobs, ...finlandJobs);
 
-    // Pull from remaining specified international regions
-    const internationalTargets = [
-      { name: 'Ireland', city: 'Dublin', query: 'engineer technician developer' },
+    // FULL LIST OF ALL 44 EUROPEAN NATIONS (+ CANADA & AUSTRALIA)
+    const europeanTargets = [
+      // Northern Europe
+      { name: 'Denmark', city: 'Copenhagen', query: 'engineer technician developer' },
+      { name: 'Norway', city: 'Oslo', query: 'engineer technician mechanic' },
       { name: 'Iceland', city: 'Reykjavik', query: 'technician mechanic engineer' },
-      { name: 'Luxembourg', city: 'Luxembourg City', query: 'developer engineer specialist' },
+      { name: 'Ireland', city: 'Dublin', query: 'engineer technician developer' },
+      { name: 'United Kingdom', city: 'London', query: 'engineer technician developer' },
+      { name: 'Estonia', city: 'Tallinn', query: 'developer engineer specialist' },
+      { name: 'Latvia', city: 'Riga', query: 'technician engineer specialist' },
+      { name: 'Lithuania', city: 'Vilnius', query: 'developer engineer technician' },
+
+      // Western Europe
       { name: 'Netherlands', city: 'Amsterdam', query: 'engineer technician developer' },
+      { name: 'Belgium', city: 'Brussels', query: 'engineer technician specialist' },
+      { name: 'Luxembourg', city: 'Luxembourg City', query: 'developer engineer specialist' },
+      { name: 'France', city: 'Paris', query: 'engineer technician developer' },
+      { name: 'Germany', city: 'Berlin', query: 'engineer technician developer welder' },
+      { name: 'Austria', city: 'Vienna', query: 'engineer technician specialist' },
       { name: 'Switzerland', city: 'Zurich', query: 'engineer specialist developer' },
+      { name: 'Liechtenstein', city: 'Vaduz', query: 'engineer specialist' },
+      { name: 'Monaco', city: 'Monaco', query: 'specialist manager' },
+
+      // Southern Europe
+      { name: 'Spain', city: 'Madrid', query: 'engineer developer technician' },
+      { name: 'Portugal', city: 'Lisbon', query: 'developer engineer technician' },
+      { name: 'Italy', city: 'Rome', query: 'engineer technician operator' },
+      { name: 'Greece', city: 'Athens', query: 'engineer technician specialist' },
+      { name: 'Malta', city: 'Valletta', query: 'developer specialist technician' },
+      { name: 'Cyprus', city: 'Nicosia', query: 'developer engineer specialist' },
+      { name: 'Croatia', city: 'Zagreb', query: 'engineer technician developer' },
+      { name: 'Slovenia', city: 'Ljubljana', query: 'engineer technician specialist' },
+      { name: 'Albania', city: 'Tirana', query: 'engineer technician' },
+      { name: 'Andorra', city: 'Andorra la Vella', query: 'specialist technician' },
+      { name: 'Bosnia and Herzegovina', city: 'Sarajevo', query: 'engineer technician' },
+      { name: 'Montenegro', city: 'Podgorica', query: 'engineer technician' },
+      { name: 'North Macedonia', city: 'Skopje', query: 'engineer technician' },
+      { name: 'San Marino', city: 'San Marino', query: 'technician specialist' },
+      { name: 'Serbia', city: 'Belgrade', query: 'engineer developer technician' },
+      { name: 'Vatican City', city: 'Vatican City', query: 'administrator' },
+
+      // Central & Eastern Europe
+      { name: 'Poland', city: 'Warsaw', query: 'engineer developer welder technician' },
+      { name: 'Czech Republic', city: 'Prague', query: 'engineer technician developer' },
+      { name: 'Slovakia', city: 'Bratislava', query: 'engineer technician operator' },
+      { name: 'Hungary', city: 'Budapest', query: 'engineer technician developer' },
+      { name: 'Romania', city: 'Bucharest', query: 'engineer developer technician' },
+      { name: 'Bulgaria', city: 'Sofia', query: 'developer engineer technician' },
+      { name: 'Belarus', city: 'Minsk', query: 'developer engineer' },
+      { name: 'Moldova', city: 'Chisinau', query: 'engineer specialist' },
+      { name: 'Ukraine', city: 'Kyiv', query: 'engineer specialist developer' },
+
+      // Non-EU / Intercontinental Targets
       { name: 'Canada', city: 'Toronto', query: 'welder machinist engineer' },
       { name: 'Australia', city: 'Sydney', query: 'welder engineer technician' }
     ];
 
-    for (const target of internationalTargets) {
-      const targetJobs = await fetchGlobalTargetJobs(target.name, target.city, target.query);
+    for (const target of europeanTargets) {
+      const targetJobs = await fetchTargetJobs(target.name, target.city, target.query);
       allJobs.push(...targetJobs);
     }
 
     if (allJobs.length === 0) {
-      console.log('No matching visa-sponsored jobs found across target regions.');
+      console.log('No matching visa-sponsored jobs found across target European regions.');
       return;
     }
 
-    console.log(`Appending ${allJobs.length} total strict visa-sponsored listings to Google Sheet...`);
+    console.log(`Appending ${allJobs.length} visa-sponsored listings to Google Sheet...`);
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
@@ -172,7 +215,7 @@ async function runIngestionPipeline() {
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: allJobs },
     });
-    console.log('Successfully completed full multi-region ingestion!');
+    console.log('Successfully completed 44-nation European ingestion!');
   } catch (error) {
     console.error('Pipeline error:', error.message);
   }
