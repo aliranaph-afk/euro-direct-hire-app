@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "dotenv": "^18.0.9",
     "googleapis": "^188.0.0"
   },
   "name": "euro-direct-hire-app",
