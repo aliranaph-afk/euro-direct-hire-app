@@ -1,14 +1,15 @@
 name: Run Ingest Script
 
+# === PASTE IT HERE ===
 on:
   schedule:
-    - cron: '0 0 * * *' # Runs daily at midnight
-  workflow_dispatch:     # Allows manual trigger
+    - cron: '0 0 * * *' # Runs every day at midnight UTC
+  workflow_dispatch:     # Allows you to click "Run workflow" manually
+# =====================
 
 jobs:
   run-ingest:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
