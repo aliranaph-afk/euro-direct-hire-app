@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EuroDirect-Hire OSINT | Verified European Jobs for Filipinos</title>
+  <title>EuroDirect-Hire | Verified European Jobs for Filipinos</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -13,12 +14,12 @@
   <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md">
     <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm tracking-wider">
+        <div class="h-9 w-9 rounded-xl bg-blue-950 text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-sm">
           EU
         </div>
         <div>
           <span class="text-sm font-bold tracking-tight text-slate-900 block leading-none">
-            EuroDirect-Hire OSINT
+            EuroDirect-Hire
           </span>
           <span class="text-[11px] text-slate-500 font-medium">
             Verified EU Vacancies & PH DMW Compliance
@@ -35,35 +36,67 @@
   <main class="max-w-6xl mx-auto px-4 py-8 w-full flex-grow">
 
     <!-- VIEW 1: LOGIN & OTP SCREEN -->
-    <div id="authView" class="max-w-md mx-auto bg-white rounded-2xl border border-slate-200 p-8 shadow-sm space-y-6 mt-12">
-      <div class="text-center space-y-1">
-        <h1 class="text-xl font-bold text-slate-900">Sign In to Your Account</h1>
-        <p class="text-xs text-slate-500">Enter your email to receive a 6-digit verification code.</p>
+    <div id="authView" class="max-w-lg mx-auto mt-8 sm:mt-12 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
+      <div class="px-6 pt-8 sm:px-10 sm:pt-10">
+        <div class="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-900 ring-1 ring-blue-100">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" class="h-6 w-6" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 10V7a5 5 0 0 1 10 0v3m-11 0h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Zm5 4v3" />
+          </svg>
+        </div>
+        <div class="text-center">
+          <p class="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-teal-700">Secure account access</p>
+          <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Welcome back</h1>
+          <p class="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-600">Sign in to explore European direct-hire opportunities with your email address.</p>
+        </div>
       </div>
 
-      <div id="emailStep" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Email Address</label>
-          <input type="email" id="loginEmail" placeholder="e.g. juandela@gmail.com" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none">
+      <div class="space-y-5 px-6 pb-8 pt-7 sm:px-10 sm:pb-10">
+        <div id="emailStep" class="space-y-4">
+          <div>
+            <label for="loginEmail" class="mb-2 block text-sm font-semibold text-slate-800">Email address</label>
+            <input type="email" id="loginEmail" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-describedby="emailHelp" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-900/10">
+            <p id="emailHelp" class="mt-2 text-xs leading-5 text-slate-500">We’ll send a one-time verification code to this address.</p>
+          </div>
+          <button onclick="sendOtp()" id="sendOtpBtn" class="w-full rounded-xl bg-blue-950 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900 focus:outline-none focus:ring-4 focus:ring-blue-900/20">
+            Continue with email
+          </button>
         </div>
-        <button onclick="sendOtp()" id="sendOtpBtn" class="w-full py-2.5 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-sm">
-          Send Verification Code ↗
-        </button>
-      </div>
 
-      <div id="otpStep" class="space-y-4 hidden">
-        <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800">
-          Verification code sent! Please check your inbox.
+        <div id="otpStep" class="hidden space-y-4">
+          <div role="status" class="rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm leading-5 text-teal-900">
+            Verification code sent. Please check your inbox.
+          </div>
+          <div>
+            <label for="loginOtp" class="mb-2 block text-sm font-semibold text-slate-800">6-digit verification code</label>
+            <input type="text" id="loginOtp" inputmode="numeric" autocomplete="one-time-code" placeholder="000000" maxlength="6" aria-describedby="otpHelp" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-center font-mono text-xl tracking-[0.35em] text-slate-900 shadow-sm transition focus:border-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-900/10">
+            <p id="otpHelp" class="mt-2 text-xs leading-5 text-slate-500">Enter the code we sent to your email address.</p>
+          </div>
+          <button onclick="verifyOtp()" id="verifyOtpBtn" class="w-full rounded-xl bg-blue-950 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900 focus:outline-none focus:ring-4 focus:ring-blue-900/20">
+            Verify and sign in
+          </button>
         </div>
-        <div>
-          <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Enter 6-Digit OTP</label>
-          <input type="text" id="loginOtp" placeholder="123456" maxlength="6" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono text-center tracking-widest text-lg">
+
+        <div class="flex items-center justify-center gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
+          <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" class="h-4 w-4 text-teal-700" stroke="currentColor" stroke-width="1.7">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m6 10 2.5 2.5L14 7m4 3a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
+          </svg>
+          Email verification · No password required
         </div>
-        <button onclick="verifyOtp()" id="verifyOtpBtn" class="w-full py-2.5 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-sm">
-          Verify & Access Platform
-        </button>
+        <div id="authError" role="alert" aria-live="polite" class="min-h-5 text-center text-sm font-medium text-red-700"></div>
       </div>
-      <div id="authError" class="text-xs text-red-600 text-center font-medium"></div>
+      <div class="border-t border-slate-100 bg-slate-50/70 px-6 py-5 text-center sm:px-10" aria-label="Philippines and European destinations">
+        <p class="mb-3 text-xs font-medium text-slate-600">Connecting Filipino talent with opportunities across Europe</p>
+        <div class="flex items-center justify-center gap-3 text-2xl" aria-label="Philippines, Sweden, Finland, Norway, Germany, France, and the Netherlands">
+          <span role="img" aria-label="Philippines">🇵🇭</span>
+          <span aria-hidden="true" class="text-sm font-semibold text-slate-400">→</span>
+          <span role="img" aria-label="Sweden">🇸🇪</span>
+          <span role="img" aria-label="Finland">🇫🇮</span>
+          <span role="img" aria-label="Norway">🇳🇴</span>
+          <span role="img" aria-label="Germany">🇩🇪</span>
+          <span role="img" aria-label="France">🇫🇷</span>
+          <span role="img" aria-label="The Netherlands">🇳🇱</span>
+        </div>
+      </div>
     </div>
 
     <!-- VIEW 2: SEARCH & DASHBOARD VIEW (Hidden initially) -->
@@ -163,7 +196,7 @@
   <!-- FOOTER -->
   <footer class="border-t border-slate-200 bg-white py-6 mt-12">
     <div class="max-w-6xl mx-auto px-4 text-center text-xs text-slate-500">
-      EuroDirect-Hire OSINT • Designed in alignment with DMW RA 11641 outbound rules.
+      EuroDirect-Hire • Designed in alignment with DMW RA 11641 outbound rules.
     </div>
   </footer>
 
@@ -192,7 +225,7 @@
       errEl.innerText = "";
       if (!email) { errEl.innerText = "Please enter a valid email address."; return; }
 
-      document.getElementById("sendOtpBtn").innerText = "Sending OTP...";
+      document.getElementById("sendOtpBtn").innerText = "Sending code...";
       try {
         const res = await fetch(`${API_URL}?action=sendOtp&email=${encodeURIComponent(email)}`);
         const data = await res.json();
@@ -206,7 +239,7 @@
       } catch (e) {
         errEl.innerText = "Network error connecting to backend.";
       }
-      document.getElementById("sendOtpBtn").innerText = "Send Verification Code ↗";
+      document.getElementById("sendOtpBtn").innerText = "Continue with email";
     }
 
     async function verifyOtp() {
@@ -215,7 +248,7 @@
       errEl.innerText = "";
       if (!otp) { errEl.innerText = "Please enter the 6-digit OTP."; return; }
 
-      document.getElementById("verifyOtpBtn").innerText = "Verifying...";
+      document.getElementById("verifyOtpBtn").innerText = "Verifying code...";
       try {
         const res = await fetch(`${API_URL}?action=verifyOtp&email=${encodeURIComponent(currentUserEmail)}&otp=${encodeURIComponent(otp)}`);
         const data = await res.json();
@@ -230,7 +263,7 @@
       } catch (e) {
         errEl.innerText = "Verification failed.";
       }
-      document.getElementById("verifyOtpBtn").innerText = "Verify & Access Platform";
+      document.getElementById("verifyOtpBtn").innerText = "Verify and sign in";
     }
 
     async function executeSearch() {
