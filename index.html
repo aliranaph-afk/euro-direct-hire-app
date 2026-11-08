@@ -31,6 +31,118 @@
       animation: confetti-flight 1.4s cubic-bezier(.15,.7,.25,1) forwards;
     }
 
+    html.theme-dark body {
+      background-color: #0b1220 !important;
+      color: #e2e8f0 !important;
+    }
+
+    html.theme-dark .bg-white,
+    html.theme-dark .bg-white\/90 {
+      background-color: #111b2b !important;
+    }
+
+    html.theme-dark .bg-slate-50,
+    html.theme-dark .bg-slate-50\/70 {
+      background-color: #111b2b !important;
+    }
+
+    html.theme-dark .bg-slate-100 {
+      background-color: #1e293b !important;
+    }
+
+    html.theme-dark .bg-slate-200 {
+      background-color: #334155 !important;
+    }
+
+    html.theme-dark .text-slate-950,
+    html.theme-dark .text-slate-900 {
+      color: #f8fafc !important;
+    }
+
+    html.theme-dark .text-slate-800,
+    html.theme-dark .text-slate-700 {
+      color: #e2e8f0 !important;
+    }
+
+    html.theme-dark .text-slate-600 {
+      color: #cbd5e1 !important;
+    }
+
+    html.theme-dark .text-slate-500,
+    html.theme-dark .text-slate-400 {
+      color: #aebed0 !important;
+    }
+
+    html.theme-dark .border-slate-100,
+    html.theme-dark .border-slate-200 {
+      border-color: #475569 !important;
+    }
+
+    html.theme-dark .border-slate-300 {
+      border-color: #64748b !important;
+    }
+
+    html.theme-dark .bg-slate-50 input,
+    html.theme-dark input,
+    html.theme-dark textarea,
+    html.theme-dark select {
+      background-color: #0f172a !important;
+      border-color: #64748b !important;
+      color: #f1f5f9 !important;
+    }
+
+    html.theme-dark input::placeholder,
+    html.theme-dark textarea::placeholder {
+      color: #94a3b8 !important;
+    }
+
+    html.theme-dark .bg-amber-50 {
+      background-color: #422006 !important;
+    }
+
+    html.theme-dark .text-amber-950 {
+      color: #fef3c7 !important;
+    }
+
+    html.theme-dark .border-amber-200 {
+      border-color: #92400e !important;
+    }
+
+    html.theme-dark .bg-teal-50 {
+      background-color: #042f2e !important;
+    }
+
+    html.theme-dark .text-teal-900 {
+      color: #ccfbf1 !important;
+    }
+
+    html.theme-dark .border-teal-200 {
+      border-color: #0f766e !important;
+    }
+
+    html.theme-dark #authView,
+    html.theme-dark #paidPaymentDetails,
+    html.theme-dark article {
+      border-color: #64748b !important;
+    }
+
+    html.theme-dark article {
+      background-color: #111b2b !important;
+      box-shadow: 0 8px 20px rgb(0 0 0 / 22%);
+    }
+
+    html.theme-dark a.text-blue-800 {
+      color: #93c5fd !important;
+    }
+
+    html.theme-dark .hover\:bg-slate-800:hover {
+      background-color: #334155 !important;
+    }
+
+    #shareStatus:empty {
+      display: none;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .confetti-piece {
         display: none;
@@ -43,7 +155,7 @@
 
   <!-- HEADER -->
   <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md">
-    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+    <div class="max-w-6xl mx-auto px-4 min-h-16 py-2 flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-3">
         <div class="h-9 w-9 rounded-xl bg-blue-950 text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-sm">
           EU
@@ -57,8 +169,8 @@
           </span>
         </div>
       </div>
-      <div id="userAuthDisplay" class="text-xs font-semibold text-slate-600">
-        <!-- Dynamically updated -->
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <div id="userAuthDisplay" class="text-xs font-semibold text-slate-600"></div>
       </div>
     </div>
   </header>
@@ -156,6 +268,16 @@
           Browse publicly sourced listings and continue to the source to apply directly. Listings come from third-party sources and may be outdated, incomplete, or unavailable. We do not guarantee employer details, job availability, visa or relocation support, or eligibility to work. Confirm details with the employer and check applicable Philippine deployment requirements independently.
         </p>
       </div>
+
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <button id="themeToggle" type="button" aria-pressed="false" onclick="toggleTheme()" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-800">
+          Dark mode
+        </button>
+        <button type="button" onclick="shareApp()" class="rounded-lg bg-blue-950 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-800">
+          Share this app
+        </button>
+      </div>
+      <p id="shareStatus" role="status" aria-live="polite" class="text-right text-xs text-teal-700"></p>
 
       <!-- DUAL SEARCH BAR -->
       <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -309,6 +431,7 @@
     let jobTitleSuggestions = [];
     const SESSION_EMAIL_KEY = "euroDirectHireEmail";
     const SESSION_TOKEN_KEY = "euroDirectHireSessionToken";
+    const THEME_KEY = "euroDirectHireTheme";
     const TIER_BADGE_CLASSES = {
       Free: "bg-blue-100 text-blue-900 border-blue-200",
       Bronze: "bg-orange-100 text-orange-950 border-orange-300",
@@ -325,6 +448,57 @@
       Silver: "cursor-pointer rounded-xl border-2 border-slate-300 bg-slate-100 p-3 text-center transition-all hover:border-slate-500",
       Gold: "cursor-pointer rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-center transition-all hover:border-amber-500"
     };
+
+    function applyTheme(isDark) {
+      document.documentElement.classList.toggle("theme-dark", isDark);
+      const toggle = document.getElementById("themeToggle");
+      toggle.setAttribute("aria-pressed", String(isDark));
+      toggle.innerText = isDark ? "Light mode" : "Dark mode";
+      localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
+    }
+
+    function toggleTheme() {
+      applyTheme(!document.documentElement.classList.contains("theme-dark"));
+    }
+
+    async function shareApp() {
+      const shareData = {
+        title: document.title,
+        text: "Explore European job listings with EuroDirect-Hire.",
+        url: window.location.href.split("#")[0]
+      };
+      const status = document.getElementById("shareStatus");
+
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+          status.innerText = "Thanks for sharing EuroDirect-Hire!";
+          return;
+        } catch (error) {
+          if (error.name === "AbortError") return;
+        }
+      }
+
+      try {
+        await navigator.clipboard.writeText(shareData.url);
+        status.innerText = "App link copied. Share it with your friends!";
+      } catch (error) {
+        const linkInput = document.createElement("textarea");
+        linkInput.value = shareData.url;
+        linkInput.setAttribute("readonly", "");
+        linkInput.style.position = "fixed";
+        linkInput.style.opacity = "0";
+        document.body.appendChild(linkInput);
+        linkInput.select();
+        const copied = document.execCommand("copy");
+        linkInput.remove();
+        if (copied) {
+          status.innerText = "App link copied. Share it with your friends!";
+        } else {
+          window.prompt("Copy this app link to share it:", shareData.url);
+        }
+      }
+    }
 
     async function postApi(payload) {
       const response = await fetch(API_URL, {
@@ -573,7 +747,7 @@
             ? `<a href="${escapeHtml(applyUrl)}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors">View original listing ↗</a>`
             : `<span class="text-xs text-slate-500">Original listing link unavailable</span>`;
           container.innerHTML += `
-            <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <article class="rounded-xl border-2 border-slate-400 bg-white p-5 shadow-sm">
               <div class="space-y-3">
                 <div class="mb-2">
                   <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
@@ -813,6 +987,7 @@
       }
     }
 
+    applyTheme(localStorage.getItem(THEME_KEY) === "dark");
     restoreSession();
   </script>
 </body>
