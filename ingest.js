@@ -16,8 +16,8 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
-// HELPER: Flexible Visa / Relocation Checker
-function offersVisaSponsorship(text) {
+// A keyword match is only a search filter, not confirmation of sponsorship.
+function mentionsVisaOrRelocation(text) {
   if (!text) return false;
   const visaRegex = /visa|relocab|relocation|work\s*permit|sponsorship|permit|visa\s*support/i;
   return visaRegex.test(text);
@@ -32,7 +32,7 @@ async function fetchSwedenJobs() {
     const rows = [];
 
     for (const hit of data.hits || []) {
-      const employer = hit.employer?.name || 'Swedish Employer';
+      const employer = hit.employer?.name || 'Employer not provided';
       if (/bemanning|staffing|manpower|adecco|randstad/i.test(employer)) continue;
 
       const headline = hit.headline || '';
@@ -40,7 +40,7 @@ async function fetchSwedenJobs() {
       const descData = await descRes.json();
       const combinedText = `${headline} ${descData.description?.text || ''}`;
 
-      if (!offersVisaSponsorship(combinedText)) continue;
+      if (!mentionsVisaOrRelocation(combinedText)) continue;
 
       const isSkilled = /cnc|welder|engineer|machinist|technician|developer|mechanic|operator|electrician/i.test(headline);
       rows.push([
@@ -50,8 +50,8 @@ async function fetchSwedenJobs() {
         employer,
         isSkilled ? 'Priority 2' : 'Priority 1',
         hit.webpage_url,
-        'S1 - Visa Sponsored',
-        isSkilled ? 'MWO Direct-Hire Exemption (Max 5)' : 'Requires DMW-Accredited PRA'
+        'Potential visa/relocation keyword match - not verified',
+        'Confirm sponsorship, work authorization, and Philippine deployment requirements independently'
       ]);
     }
     return rows;
@@ -75,9 +75,9 @@ async function fetchFinlandJobs() {
       const description = item.description || '';
       const combinedText = `${headline} ${description}`;
 
-      if (!offersVisaSponsorship(combinedText)) continue;
+      if (!mentionsVisaOrRelocation(combinedText)) continue;
 
-      const employer = item.employer?.name || 'Finnish Direct Employer';
+      const employer = item.employer?.name || 'Employer not provided';
       rows.push([
         headline,
         'Finland',
@@ -85,8 +85,8 @@ async function fetchFinlandJobs() {
         employer,
         'Priority 2',
         item.url || 'https://tyomarkkinatori.fi',
-        'S1 - Visa Sponsored',
-        'MWO Direct-Hire Exemption (Max 5)'
+        'Potential visa/relocation keyword match - not verified',
+        'Confirm sponsorship, work authorization, and Philippine deployment requirements independently'
       ]);
     }
     return rows;
@@ -98,7 +98,7 @@ async function fetchFinlandJobs() {
 
 // 3. EUROPE & INTERNATIONAL: Global Public Jobicy API Endpoint
 async function fetchEuropeanJobs() {
-  console.log('Fetching live European & International visa-sponsored listings...');
+  console.log('Fetching public European & international job listings...');
   try {
     const res = await fetch('https://jobicy.com/api/v2/remote-jobs?count=50&geo=europe');
     if (!res.ok) return [];
@@ -110,8 +110,8 @@ async function fetchEuropeanJobs() {
       const description = job.jobDescription || '';
       const combinedText = `${headline} ${description}`;
 
-      // Check for visa/relocation or international applicant allowance
-      if (!offersVisaSponsorship(combinedText) && !/worldwide|anywhere|everywhere/i.test(job.jobGeo || '')) {
+      // Include potential matches only; source text does not verify eligibility or sponsorship.
+      if (!mentionsVisaOrRelocation(combinedText) && !/worldwide|anywhere|everywhere/i.test(job.jobGeo || '')) {
         continue;
       }
 
@@ -125,8 +125,8 @@ async function fetchEuropeanJobs() {
         employer,
         'Priority 2',
         job.url,
-        'S1 - Visa Sponsored',
-        'MWO Direct-Hire Exemption (Max 5)'
+        'Potential visa/relocation keyword match - not verified',
+        'Confirm sponsorship, work authorization, and Philippine deployment requirements independently'
       ]);
     }
     return rows;
@@ -154,11 +154,11 @@ async function runIngestionPipeline() {
     allJobs.push(...euroJobs);
 
     if (allJobs.length === 0) {
-      console.log('No matching visa-sponsored jobs found.');
+      console.log('No matching public job listings found.');
       return;
     }
 
-    console.log(`Appending ${allJobs.length} visa-sponsored jobs to Google Sheet...`);
+    console.log(`Appending ${allJobs.length} public job listings to Google Sheet...`);
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
@@ -167,7 +167,7 @@ async function runIngestionPipeline() {
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: allJobs },
     });
-    console.log('Successfully appended multi-source visa-sponsored jobs to sheet!');
+    console.log('Successfully appended multi-source job listings to sheet!');
   } catch (error) {
     console.error('Pipeline error:', error.message);
   }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EuroDirect-Hire | Verified European Jobs for Filipinos</title>
+  <title>EuroDirect-Hire | European Job Search</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -22,7 +22,7 @@
             EuroDirect-Hire
           </span>
           <span class="text-[11px] text-slate-500 font-medium">
-            Verified EU Vacancies & PH DMW Compliance
+            European job search · Apply directly
           </span>
         </div>
       </div>
@@ -46,7 +46,7 @@
         <div class="text-center">
           <p class="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-teal-700">Secure account access</p>
           <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Welcome back</h1>
-          <p class="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-600">Sign in to explore European direct-hire opportunities with your email address.</p>
+          <p class="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-600">Search European job listings and continue to the source to apply directly.</p>
         </div>
       </div>
 
@@ -55,7 +55,7 @@
           <div>
             <label for="loginEmail" class="mb-2 block text-sm font-semibold text-slate-800">Email address</label>
             <input type="email" id="loginEmail" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-describedby="emailHelp" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-900/10">
-            <p id="emailHelp" class="mt-2 text-xs leading-5 text-slate-500">We’ll send a one-time verification code to this address.</p>
+            <p id="emailHelp" class="mt-2 text-xs leading-5 text-slate-500">We’ll send a one-time verification code to this address. Read our <a class="font-medium text-blue-800 underline underline-offset-2 hover:text-blue-950" href="./privacy.html">Privacy Notice</a>.</p>
           </div>
           <button onclick="sendOtp()" id="sendOtpBtn" class="w-full rounded-xl bg-blue-950 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900 focus:outline-none focus:ring-4 focus:ring-blue-900/20">
             Continue with email
@@ -113,10 +113,10 @@
           </span>
         </div>
         <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">
-          Verified European Direct-Hire Job Search
+          European Job Search
         </h1>
         <p class="text-xs sm:text-sm text-slate-300 max-w-4xl leading-relaxed">
-          Search verified government database records across Europe. Staffing agencies are automatically excluded. Check the PH Outbound DMW Compliance badge on results before applying.
+          Browse publicly sourced listings and continue to the source to apply directly. Listings come from third-party sources and may be outdated, incomplete, or unavailable. We do not guarantee employer details, job availability, visa or relocation support, or eligibility to work. Confirm details with the employer and check applicable Philippine deployment requirements independently.
         </p>
       </div>
 
@@ -149,7 +149,7 @@
   <div id="paywallModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-5 max-h-[90vh] overflow-y-auto">
       <div class="text-center space-y-1">
-        <h2 class="text-xl font-bold text-slate-900">Subscription Required</h2>
+        <h2 class="text-xl font-bold text-slate-900">Choose a plan to continue</h2>
         <p id="paywallReason" class="text-xs text-slate-500">Your free trial has expired or daily limit has been reached. Choose a paid tier to continue.</p>
       </div>
 
@@ -158,45 +158,93 @@
         <div onclick="selectTier('Bronze', 39)" id="tierBronze" class="cursor-pointer border-2 rounded-xl p-3 text-center border-slate-200 hover:border-slate-900 transition-all">
           <div class="text-xs font-bold text-slate-900">BRONZE</div>
           <div class="text-sm font-extrabold text-emerald-600 mt-1">₱39</div>
-          <div class="text-[10px] text-slate-500 mt-1">7 results/day<br>7 Days</div>
+          <div class="text-[10px] text-slate-500 mt-1">7 searches/day<br>7 Days</div>
         </div>
         <div onclick="selectTier('Silver', 49)" id="tierSilver" class="cursor-pointer border-2 rounded-xl p-3 text-center border-slate-200 hover:border-slate-900 transition-all">
           <div class="text-xs font-bold text-slate-900">SILVER</div>
           <div class="text-sm font-extrabold text-emerald-600 mt-1">₱49</div>
-          <div class="text-[10px] text-slate-500 mt-1">14 results/day<br>14 Days</div>
+          <div class="text-[10px] text-slate-500 mt-1">14 searches/day<br>14 Days</div>
         </div>
         <div onclick="selectTier('Gold', 59)" id="tierGold" class="cursor-pointer border-2 rounded-xl p-3 text-center border-slate-200 hover:border-slate-900 transition-all">
           <div class="text-xs font-bold text-slate-900">GOLD</div>
           <div class="text-sm font-extrabold text-emerald-600 mt-1">₱59</div>
-          <div class="text-[10px] text-slate-500 mt-1">21 results/day<br>21 Days</div>
+          <div class="text-[10px] text-slate-500 mt-1">21 searches/day<br>21 Days</div>
         </div>
       </div>
 
       <!-- GCASH PAYMENT BOX -->
-      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-        <div class="text-xs font-bold text-slate-900 text-center">Step 1: Scan GCash QR & Pay <span id="selectedPriceDisplay" class="text-emerald-600">₱39</span></div>
+      <div id="paidPaymentDetails" class="hidden p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+        <div class="text-xs font-bold text-slate-900 text-center">One-time GCash payment <span id="selectedPriceDisplay" class="text-emerald-600">₱39</span></div>
+        <p class="text-center text-[11px] leading-5 text-slate-600">No automatic renewal. Access begins after payment is verified and your selected plan is activated. Selecting a plan does not reserve a paid-user slot; once a payment reference is accepted, your pending application occupies a slot until approved or rejected.</p>
         <div class="flex justify-center">
-          <!-- Replace src with your GCash QR code image link or file -->
-          <div class="h-36 w-36 bg-slate-200 rounded-lg flex items-center justify-center text-[10px] text-slate-500 border border-slate-300">
-            [ GCash QR Code Image ]
+          <div class="space-y-3 text-center">
+            <img src="./gcash-qr.jpg" alt="GCash and InstaPay QR code for payment to Ronald C." class="mx-auto h-52 w-52 rounded-lg border border-slate-200 bg-white object-contain p-2" width="208" height="208">
+            <p class="text-sm font-semibold text-slate-900">Payee: Ronald C.</p>
+            <p class="text-xs leading-5 text-slate-700">Pay the exact amount shown above, one payment only. Before confirming, check that the recipient name in GCash is <strong>Ronald C.</strong> Do not pay if the name differs.</p>
           </div>
         </div>
         <div>
-          <label class="block text-[11px] font-semibold uppercase text-slate-600 mb-1">Step 2: Enter GCash Reference Number</label>
-          <input type="text" id="gcashRefInput" placeholder="e.g. 1048293849201" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono">
+          <label for="gcashRefInput" class="block text-[11px] font-semibold uppercase text-slate-600 mb-1">GCash reference number</label>
+        <input type="text" id="gcashRefInput" maxlength="100" autocomplete="off" placeholder="e.g. 1048293849201" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono">
         </div>
-        <button onclick="submitGcashPayment()" class="w-full py-2 rounded-lg text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm">
-          Submit Payment for Verification ↗
+        <div>
+        <label for="payerNameInput" class="block text-[11px] font-semibold uppercase text-slate-600 mb-1">Your Name</label>
+        <input type="text" id="payerNameInput" maxlength="100" autocomplete="name" placeholder="Name used for your payment" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs">
+        </div>
+        <label class="flex items-start gap-2 text-[11px] leading-5 text-slate-600">
+          <input id="termsAgreement" type="checkbox" class="mt-1 rounded border-slate-300 text-blue-900 focus:ring-blue-900">
+          <span>I have read and agree to the <a class="font-semibold text-blue-800 underline underline-offset-2" href="./terms.html" target="_blank" rel="noopener noreferrer">Service Terms</a> and acknowledge the <a class="font-semibold text-blue-800 underline underline-offset-2" href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy Notice</a>.</span>
+        </label>
+        <p class="text-center text-[11px] leading-5 text-slate-600">No refunds for change of mind or unused plan time after activation, except where required by applicable law or when the paid service is not provided as promised. See the Service Terms.</p>
+        <button id="submitPaymentBtn" onclick="submitGcashPayment()" class="w-full rounded-lg bg-emerald-700 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-700/20">
+          Submit GCash reference
         </button>
       </div>
       <div id="paymentStatusMsg" class="text-xs text-center font-medium"></div>
     </div>
   </div>
 
+  <div id="paymentSubmittedModal" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true" aria-labelledby="paymentSubmittedTitle" aria-describedby="paymentSubmittedMessage">
+    <div class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
+      <div class="text-center">
+        <h2 id="paymentSubmittedTitle" class="text-xl font-bold text-slate-950">Payment submitted for review</h2>
+        <p id="paymentSubmittedMessage" class="mt-2 text-sm leading-6 text-slate-600">Please allow up to 24 hours for manual payment review. If approved, we’ll email confirmation that your selected tier is active, with a link back to EuroDirect-Hire.</p>
+      </div>
+      <button onclick="closePaymentSubmittedModal()" class="w-full rounded-xl bg-blue-950 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-900 focus:outline-none focus:ring-4 focus:ring-blue-900/20">
+        Understood
+      </button>
+    </div>
+  </div>
+
+  <div id="capacityModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/60 p-4" role="alertdialog" aria-modal="true" aria-labelledby="capacityModalTitle" aria-describedby="capacityModalMessage">
+    <div class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
+      <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-800" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M10.3 3.9 1.8 18.6A1.6 1.6 0 0 0 3.2 21h17.6a1.6 1.6 0 0 0 1.4-2.4L13.7 3.9a1.96 1.96 0 0 0-3.4 0Z" />
+        </svg>
+      </div>
+      <div class="text-center">
+        <h2 id="capacityModalTitle" class="text-xl font-bold text-slate-950">Paid slots are temporarily full</h2>
+        <p id="capacityModalMessage" class="mt-2 text-sm leading-6 text-slate-600">All 200 paid slots are currently occupied by active subscribers or pending payment reviews. Free-tier access is not affected. New paid checkouts will reopen when a slot is available.</p>
+      </div>
+      <button onclick="closeCapacityModal()" class="w-full rounded-xl bg-blue-950 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-900 focus:outline-none focus:ring-4 focus:ring-blue-900/20">
+        Understood
+      </button>
+    </div>
+  </div>
+
   <!-- FOOTER -->
   <footer class="border-t border-slate-200 bg-white py-6 mt-12">
     <div class="max-w-6xl mx-auto px-4 text-center text-xs text-slate-500">
-      EuroDirect-Hire • Designed in alignment with DMW RA 11641 outbound rules.
+      <div class="space-y-2">
+        <p>EuroDirect-Hire is an independent job-search service and is not affiliated with or endorsed by the DMW, other government agencies, or listed employers.</p>
+        <p>Listings are provided for information only. Verify each opportunity and all employment, immigration, and Philippine deployment requirements with the relevant authorities and employer.</p>
+        <p class="flex flex-wrap justify-center gap-x-4 gap-y-1">
+          <a class="font-medium text-blue-800 underline underline-offset-2" href="./privacy.html">Privacy Notice</a>
+          <a class="font-medium text-blue-800 underline underline-offset-2" href="./terms.html">Service Terms</a>
+          <a class="font-medium text-blue-800 underline underline-offset-2" href="mailto:ali.ranaph@gmail.com">Contact: ali.ranaph@gmail.com</a>
+        </p>
+      </div>
     </div>
   </footer>
 
@@ -208,8 +256,19 @@
     let currentUserEmail = "";
     let selectedTierName = "Bronze";
     let selectedTierPrice = 39;
+    let capacityCheckId = 0;
+    let paymentSubmittedForReview = false;
 
-    function selectTier(tier, price) {
+    async function selectTier(tier, price) {
+      if (paymentSubmittedForReview) {
+        document.getElementById("paidPaymentDetails").classList.add("hidden");
+        const statusMsg = document.getElementById("paymentStatusMsg");
+        statusMsg.innerText = "Your payment is awaiting review. Please allow up to 24 hours for an email update.";
+        statusMsg.className = "text-xs text-center font-medium text-slate-600";
+        return;
+      }
+
+      const requestId = ++capacityCheckId;
       selectedTierName = tier;
       selectedTierPrice = price;
       document.getElementById("selectedPriceDisplay").innerText = "₱" + price;
@@ -217,6 +276,47 @@
         document.getElementById("tier" + t).className = "cursor-pointer border-2 rounded-xl p-3 text-center border-slate-200 hover:border-slate-900 transition-all";
       });
       document.getElementById("tier" + tier).className = "cursor-pointer border-2 rounded-xl p-3 text-center border-slate-900 bg-slate-50 transition-all shadow-sm";
+
+      const statusMsg = document.getElementById("paymentStatusMsg");
+      const paymentDetails = document.getElementById("paidPaymentDetails");
+      statusMsg.innerText = "";
+      paymentDetails.classList.add("hidden");
+      document.getElementById("gcashRefInput").value = "";
+      document.getElementById("payerNameInput").value = "";
+      try {
+        const res = await fetch(`${API_URL}?action=checkPaidCapacity&email=${encodeURIComponent(currentUserEmail)}`);
+        const data = await res.json();
+        if (requestId !== capacityCheckId) return;
+        if (data.paymentPending) {
+          statusMsg.innerText = data.message || "Your payment application is already awaiting review. Please allow up to 24 hours for an update.";
+          statusMsg.className = "text-xs text-center font-medium text-slate-600";
+        } else if (data.capacityFull) {
+          document.getElementById("capacityModal").classList.remove("hidden");
+          document.getElementById("capacityModal").classList.add("flex");
+        } else if (data.success) {
+          paymentDetails.classList.remove("hidden");
+        } else if (!data.success) {
+          statusMsg.innerText = data.message || "Unable to check paid-plan availability.";
+          statusMsg.className = "text-xs text-center font-medium text-red-600";
+        }
+      } catch (e) {
+        if (requestId !== capacityCheckId) return;
+        paymentDetails.classList.add("hidden");
+        statusMsg.innerText = "Unable to check paid-plan availability. Please try again.";
+        statusMsg.className = "text-xs text-center font-medium text-red-600";
+      }
+    }
+
+    function closeCapacityModal() {
+      const modal = document.getElementById("capacityModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function closePaymentSubmittedModal() {
+      const modal = document.getElementById("paymentSubmittedModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
     }
 
     async function sendOtp() {
@@ -270,7 +370,7 @@
       const position = document.getElementById("searchPosition").value.trim();
       const country = document.getElementById("searchCountry").value.trim();
       const container = document.getElementById("resultsContainer");
-      container.innerHTML = `<div class="col-span-2 text-center py-8 text-xs text-slate-500">Searching verified database...</div>`;
+      container.innerHTML = `<div class="col-span-2 text-center py-8 text-xs text-slate-500">Searching job listings...</div>`;
 
       try {
         const res = await fetch(`${API_URL}?action=search&email=${encodeURIComponent(currentUserEmail)}&position=${encodeURIComponent(position)}&country=${encodeURIComponent(country)}`);
@@ -293,7 +393,7 @@
         document.getElementById("searchLimitDisplay").innerText = `Searches today: ${data.searchesUsedToday} / ${data.dailyLimit}`;
 
         if (data.results.length === 0) {
-          container.innerHTML = `<div class="col-span-2 text-center py-8 text-xs text-slate-500">No matching jobs found in Google Sheets database.</div>`;
+          container.innerHTML = `<div class="col-span-2 text-center py-8 text-xs text-slate-500">No matching job listings found.</div>`;
           return;
         }
 
@@ -303,11 +403,10 @@
           container.innerHTML += `
             <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-3 flex flex-col justify-between">
               <div>
-                <div class="flex items-center justify-between mb-2">
-                  <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-800 border border-indigo-300">
-                    Sponsorship: ${job.sponsorshipBadge}
+                <div class="mb-2">
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    Check details with employer
                   </span>
-                  <span class="text-xs font-medium text-slate-500">${job.priorityTier}</span>
                 </div>
                 <h3 class="text-lg font-bold text-slate-900">${job.jobTitle}</h3>
                 <p class="text-sm font-semibold text-slate-700 mt-1">${job.employerName}</p>
@@ -315,12 +414,12 @@
                   📍 ${job.cityOrRegion}, ${job.country}
                 </div>
                 <div class="mt-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
-                  <strong>PH Outbound DMW Notice:</strong> ${job.dmwNotice}
+                  <strong>Philippine deployment reminder:</strong> Rules and requirements depend on your circumstances. Confirm current requirements directly with the DMW or other relevant authorities.
                 </div>
               </div>
               <div class="pt-3 border-t border-slate-100 flex justify-end">
-                <a href="${job.officialApplyUrl}" target="_blank" class="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors">
-                  Apply on Official Site ↗
+                <a href="${job.officialApplyUrl}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors">
+                  View original listing ↗
                 </a>
               </div>
             </article>
@@ -334,8 +433,23 @@
 
     async function submitGcashPayment() {
       const refNumber = document.getElementById("gcashRefInput").value.trim();
+      const payerName = document.getElementById("payerNameInput").value.trim();
+      const submittedTier = selectedTierName;
       const statusMsg = document.getElementById("paymentStatusMsg");
+      const submitButton = document.getElementById("submitPaymentBtn");
       statusMsg.innerText = "";
+
+      if (!document.getElementById("termsAgreement").checked) {
+        statusMsg.innerText = "Please agree to the Service Terms and review the Privacy Notice before submitting.";
+        statusMsg.className = "text-xs text-center font-medium text-red-600";
+        return;
+      }
+
+      if (document.getElementById("paidPaymentDetails").classList.contains("hidden")) {
+        statusMsg.innerText = "Paid-plan availability must be confirmed before submitting payment.";
+        statusMsg.className = "text-xs text-center font-medium text-red-600";
+        return;
+      }
 
       if (!refNumber) {
         statusMsg.innerText = "Please enter your GCash reference number.";
@@ -343,8 +457,16 @@
         return;
       }
 
+      if (!payerName) {
+        statusMsg.innerText = "Please enter your name.";
+        statusMsg.className = "text-xs text-center font-medium text-red-600";
+        return;
+      }
+
       statusMsg.innerText = "Submitting reference to verification queue...";
       statusMsg.className = "text-xs text-center font-medium text-slate-600";
+      submitButton.disabled = true;
+      submitButton.innerText = "Submitting...";
 
       try {
         const res = await fetch(API_URL, {
@@ -353,24 +475,41 @@
           body: JSON.stringify({
             action: "submitPayment",
             email: currentUserEmail,
-            tier: selectedTierName,
-            refNumber: refNumber
+            tier: submittedTier,
+            refNumber: refNumber,
+            payerName: payerName
           })
         });
         const data = await res.json();
+        if (data.capacityFull) {
+          document.getElementById("paidPaymentDetails").classList.add("hidden");
+          document.getElementById("capacityModal").classList.remove("hidden");
+          document.getElementById("capacityModal").classList.add("flex");
+          statusMsg.innerText = "";
+          submitButton.disabled = false;
+          submitButton.innerText = "Submit GCash reference";
+          return;
+        }
         if (data.success) {
-          statusMsg.innerText = "Success! Payment logged as Pending. Once verified by admin, you will receive a confirmation email.";
-          statusMsg.className = "text-xs text-center font-medium text-emerald-600";
-          setTimeout(() => {
-            document.getElementById("paywallModal").classList.add("hidden");
-          }, 4000);
+          paymentSubmittedForReview = true;
+          document.getElementById("paidPaymentDetails").classList.add("hidden");
+          document.getElementById("paywallModal").classList.add("hidden");
+          document.getElementById("paymentSubmittedMessage").innerText =
+            "Please allow up to 24 hours for manual review of your " + submittedTier +
+            " tier payment. Your pending application counts toward paid capacity. If approved, we’ll email confirmation that your selected tier is active, with a link back to EuroDirect-Hire.";
+          document.getElementById("paymentSubmittedModal").classList.remove("hidden");
+          document.getElementById("paymentSubmittedModal").classList.add("flex");
         } else {
           statusMsg.innerText = data.message;
           statusMsg.className = "text-xs text-center font-medium text-red-600";
+          submitButton.disabled = false;
+          submitButton.innerText = "Submit GCash reference";
         }
       } catch (e) {
         statusMsg.innerText = "Failed to submit payment details.";
         statusMsg.className = "text-xs text-center font-medium text-red-600";
+        submitButton.disabled = false;
+        submitButton.innerText = "Submit GCash reference";
       }
     }
   </script>
