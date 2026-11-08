@@ -143,6 +143,7 @@
             Searches today: 0 / 3
           </span>
         </div>
+        <p id="dashboardGreeting" class="text-sm font-semibold text-blue-200">Welcome back!</p>
         <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">
           European Job Search
         </h1>
@@ -353,6 +354,7 @@
       document.getElementById("authView").classList.add("hidden");
       document.getElementById("dashboardView").classList.remove("hidden");
       document.getElementById("userAuthDisplay").innerText = email;
+      document.getElementById("dashboardGreeting").innerText = "Welcome back, " + email + "!";
       document.getElementById("resultsContainer").innerText =
         "Enter a job title or destination to search for matching listings.";
     }
