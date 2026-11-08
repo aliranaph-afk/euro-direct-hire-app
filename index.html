@@ -461,6 +461,19 @@
       applyTheme(!document.documentElement.classList.contains("theme-dark"));
     }
 
+    function showPaidPlans() {
+      document.getElementById("paywallReason").innerText = "Choose a paid tier to continue searching.";
+      document.getElementById("paywallModal").classList.remove("hidden");
+    }
+
+    function renderDailyLimitMessage(message) {
+      const upgradeLink = '<a href="#paid-plans" onclick="event.preventDefault(); showPaidPlans();" class="font-bold text-blue-800 underline underline-offset-2 hover:text-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-800 rounded">UPGRADE</a>';
+      const escapedMessage = escapeHtml(message);
+      const linkedMessage = escapedMessage.replace(/upgrade/i, upgradeLink);
+      document.getElementById("resultsContainer").innerHTML =
+        `<div class="col-span-1 md:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-950" role="status">${linkedMessage}</div>`;
+    }
+
     async function shareApp() {
       const shareData = {
         title: document.title,
@@ -707,15 +720,15 @@
         });
 
         if (data.paywallRequired) {
+          showPaidPlans();
           document.getElementById("paywallReason").innerText = data.message;
-          document.getElementById("paywallModal").classList.remove("hidden");
           container.innerHTML = "";
           return;
         }
 
         if (data.dailyLimitReached) {
           document.getElementById("paywallModal").classList.add("hidden");
-          container.innerHTML = `<div class="col-span-1 md:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-950" role="status">${escapeHtml(data.message)}</div>`;
+          renderDailyLimitMessage(data.message);
           return;
         }
 

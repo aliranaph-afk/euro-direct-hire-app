@@ -340,6 +340,8 @@ function handleSearch(email, token, position, country) {
     if (freeTrialLastDay) {
       limitMessage = "You have reached your daily limit of " + allowedResults +
         " searches for the Free tier. Your free trial ends today. Choose a paid tier to continue searching.";
+    } else if (user.activeTier === "Free") {
+      limitMessage += " Or upgrade your tier.";
     }
     return responseJSON({
       success: false,

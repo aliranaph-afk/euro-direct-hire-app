@@ -195,7 +195,7 @@ test('free-tier search limits only show paid options on the final trial day', ()
     assert.equal(result.paywallRequired, false);
     assert.equal(
       result.message,
-      'You have reached your daily limit of 3 searches for the Free tier. Please try again tomorrow.'
+      'You have reached your daily limit of 3 searches for the Free tier. Please try again tomorrow. Or upgrade your tier.'
     );
   }
 
