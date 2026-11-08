@@ -7,6 +7,37 @@
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes confetti-flight {
+      0% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) rotate(0deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate3d(var(--confetti-x), var(--confetti-y), 0) rotate(var(--confetti-rotation));
+      }
+    }
+
+    .confetti-piece {
+      position: fixed;
+      top: 38%;
+      left: 50%;
+      z-index: 100;
+      width: 9px;
+      height: 14px;
+      border-radius: 2px;
+      pointer-events: none;
+      animation: confetti-flight 1.4s cubic-bezier(.15,.7,.25,1) forwards;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .confetti-piece {
+        display: none;
+        animation: none;
+      }
+    }
+  </style>
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col justify-between">
 
@@ -55,7 +86,7 @@
           <div>
             <label for="loginEmail" class="mb-2 block text-sm font-semibold text-slate-800">Email address</label>
             <input type="email" id="loginEmail" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-describedby="emailHelp" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-900/10">
-            <p id="emailHelp" class="mt-2 text-xs leading-5 text-slate-500">We’ll send a one-time verification code to this address. Read our <a class="font-medium text-blue-800 underline underline-offset-2 hover:text-blue-950" href="./privacy.html">Privacy Notice</a>.</p>
+            <p id="emailHelp" class="mt-2 text-xs leading-5 text-slate-500">We’ll verify this browser by email once and keep it signed in on this device. Read our <a class="font-medium text-blue-800 underline underline-offset-2 hover:text-blue-950" href="./privacy.html">Privacy Notice</a>.</p>
           </div>
           <button onclick="sendOtp()" id="sendOtpBtn" class="w-full rounded-xl bg-blue-950 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900 focus:outline-none focus:ring-4 focus:ring-blue-900/20">
             Continue with email
@@ -105,7 +136,7 @@
       <!-- HERO BANNER -->
       <div class="rounded-2xl bg-slate-900 text-white p-6 space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <span id="tierBadge" class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+          <span id="tierBadge" class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-900 border border-blue-200">
             Tier: Free Trial
           </span>
           <span id="searchLimitDisplay" class="text-xs text-slate-300">
@@ -123,8 +154,11 @@
       <!-- DUAL SEARCH BAR -->
       <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <div>
-          <label class="block text-[11px] font-semibold uppercase text-slate-500 mb-1">Position / Job Title</label>
-          <input type="text" id="searchPosition" placeholder="e.g. Welder, CNC, Factory..." class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900">
+          <label for="searchPosition" class="block text-[11px] font-semibold uppercase text-slate-500 mb-1">Position / Job Title</label>
+          <div class="relative">
+            <input type="text" id="searchPosition" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="jobTitleSuggestions" autocomplete="off" oninput="predictJobTitles()" onkeydown="handlePositionKeydown(event)" placeholder="e.g. Welder, CNC, Factory..." class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900">
+            <ul id="jobTitleSuggestions" role="listbox" class="absolute z-20 mt-1 hidden max-h-60 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"></ul>
+          </div>
         </div>
         <div>
           <label class="block text-[11px] font-semibold uppercase text-slate-500 mb-1">Country / Destination</label>
@@ -138,7 +172,7 @@
       </div>
 
       <!-- SEARCH RESULTS CONTAINER -->
-      <div id="resultsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div id="resultsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4" aria-live="polite">
         <!-- Populated via JS -->
       </div>
     </div>
@@ -154,21 +188,26 @@
       </div>
 
       <!-- PRICING CARDS -->
-      <div class="grid grid-cols-3 gap-3">
-        <div onclick="selectTier('Bronze', 39)" id="tierBronze" class="cursor-pointer border-2 rounded-xl p-3 text-center border-slate-200 hover:border-slate-900 transition-all">
-          <div class="text-xs font-bold text-slate-900">BRONZE</div>
-          <div class="text-sm font-extrabold text-emerald-600 mt-1">₱39</div>
-          <div class="text-[10px] text-slate-500 mt-1">7 searches/day<br>7 Days</div>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div id="tierFree" class="rounded-xl border-2 border-blue-200 bg-blue-50 p-3 text-center">
+          <div class="text-xs font-bold text-blue-900">FREE TRIAL</div>
+          <div class="mt-1 text-sm font-extrabold text-blue-700">₱0</div>
+          <div class="mt-1 text-[10px] text-blue-800">3 searches/day<br>3 Days</div>
         </div>
-        <div onclick="selectTier('Silver', 49)" id="tierSilver" class="cursor-pointer border-2 rounded-xl p-3 text-center border-slate-200 hover:border-slate-900 transition-all">
-          <div class="text-xs font-bold text-slate-900">SILVER</div>
-          <div class="text-sm font-extrabold text-emerald-600 mt-1">₱49</div>
-          <div class="text-[10px] text-slate-500 mt-1">14 searches/day<br>14 Days</div>
+        <div onclick="selectTier('Bronze', 39)" id="tierBronze" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectTier('Bronze',39)}" class="cursor-pointer rounded-xl border-2 border-orange-200 bg-orange-50 p-3 text-center transition-all hover:border-orange-400">
+          <div class="text-xs font-bold text-orange-950">BRONZE</div>
+          <div class="mt-1 text-sm font-extrabold text-orange-700">₱39</div>
+          <div class="mt-1 text-[10px] text-orange-900">7 searches/day<br>7 Days</div>
         </div>
-        <div onclick="selectTier('Gold', 59)" id="tierGold" class="cursor-pointer border-2 rounded-xl p-3 text-center border-slate-200 hover:border-slate-900 transition-all">
-          <div class="text-xs font-bold text-slate-900">GOLD</div>
-          <div class="text-sm font-extrabold text-emerald-600 mt-1">₱59</div>
-          <div class="text-[10px] text-slate-500 mt-1">21 searches/day<br>21 Days</div>
+        <div onclick="selectTier('Silver', 49)" id="tierSilver" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectTier('Silver',49)}" class="cursor-pointer rounded-xl border-2 border-slate-300 bg-slate-100 p-3 text-center transition-all hover:border-slate-500">
+          <div class="text-xs font-bold text-slate-800">SILVER</div>
+          <div class="mt-1 text-sm font-extrabold text-slate-700">₱49</div>
+          <div class="mt-1 text-[10px] text-slate-700">14 searches/day<br>14 Days</div>
+        </div>
+        <div onclick="selectTier('Gold', 59)" id="tierGold" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectTier('Gold',59)}" class="cursor-pointer rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-center transition-all hover:border-amber-500">
+          <div class="text-xs font-bold text-amber-950">GOLD</div>
+          <div class="mt-1 text-sm font-extrabold text-amber-700">₱59</div>
+          <div class="mt-1 text-[10px] text-amber-900">21 searches/day<br>21 Days</div>
         </div>
       </div>
 
@@ -258,6 +297,87 @@
     let selectedTierPrice = 39;
     let capacityCheckId = 0;
     let paymentSubmittedForReview = false;
+    let suggestionTimer = null;
+    let suggestionRequestId = 0;
+    let activeSuggestionIndex = -1;
+    let jobTitleSuggestions = [];
+    const SESSION_EMAIL_KEY = "euroDirectHireEmail";
+    const SESSION_TOKEN_KEY = "euroDirectHireSessionToken";
+    const TIER_BADGE_CLASSES = {
+      Free: "bg-blue-100 text-blue-900 border-blue-200",
+      Bronze: "bg-orange-100 text-orange-950 border-orange-300",
+      Silver: "bg-slate-200 text-slate-800 border-slate-300",
+      Gold: "bg-amber-100 text-amber-950 border-amber-300"
+    };
+    const TIER_CARD_CLASSES = {
+      Bronze: "cursor-pointer rounded-xl border-2 border-orange-400 bg-orange-100 p-3 text-center shadow-sm ring-2 ring-orange-300 transition-all",
+      Silver: "cursor-pointer rounded-xl border-2 border-slate-500 bg-slate-200 p-3 text-center shadow-sm ring-2 ring-slate-300 transition-all",
+      Gold: "cursor-pointer rounded-xl border-2 border-amber-500 bg-amber-100 p-3 text-center shadow-sm ring-2 ring-amber-300 transition-all"
+    };
+    const DEFAULT_TIER_CARD_CLASSES = {
+      Bronze: "cursor-pointer rounded-xl border-2 border-orange-200 bg-orange-50 p-3 text-center transition-all hover:border-orange-400",
+      Silver: "cursor-pointer rounded-xl border-2 border-slate-300 bg-slate-100 p-3 text-center transition-all hover:border-slate-500",
+      Gold: "cursor-pointer rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-center transition-all hover:border-amber-500"
+    };
+
+    async function postApi(payload) {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      return response.json();
+    }
+
+    function escapeHtml(value) {
+      return String(value == null ? "" : value).replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[character]);
+    }
+
+    function safeExternalUrl(value) {
+      try {
+        const url = new URL(value);
+        return url.protocol === "https:" ? url.href : "";
+      } catch (e) {
+        return "";
+      }
+    }
+
+    function showDashboard(email) {
+      currentUserEmail = email;
+      document.getElementById("authView").classList.add("hidden");
+      document.getElementById("dashboardView").classList.remove("hidden");
+      document.getElementById("userAuthDisplay").innerText = email;
+      document.getElementById("resultsContainer").innerText =
+        "Enter a job title or destination to search for matching listings.";
+    }
+
+    async function restoreSession() {
+      const email = localStorage.getItem(SESSION_EMAIL_KEY);
+      const token = localStorage.getItem(SESSION_TOKEN_KEY);
+      if (!email || !token) return;
+
+      currentUserEmail = email;
+      try {
+        const data = await postApi({ action: "validateSession", email: email, token: token });
+        if (data.success) {
+          showDashboard(data.email || email);
+        } else {
+          localStorage.removeItem(SESSION_EMAIL_KEY);
+          localStorage.removeItem(SESSION_TOKEN_KEY);
+          document.getElementById("loginEmail").value = email;
+          currentUserEmail = "";
+        }
+      } catch (e) {
+        document.getElementById("authError").innerText =
+          "Could not restore your saved session. Check your connection and try again.";
+      }
+    }
 
     async function selectTier(tier, price) {
       if (paymentSubmittedForReview) {
@@ -273,9 +393,9 @@
       selectedTierPrice = price;
       document.getElementById("selectedPriceDisplay").innerText = "₱" + price;
       ['Bronze', 'Silver', 'Gold'].forEach(t => {
-        document.getElementById("tier" + t).className = "cursor-pointer border-2 rounded-xl p-3 text-center border-slate-200 hover:border-slate-900 transition-all";
+        document.getElementById("tier" + t).className = DEFAULT_TIER_CARD_CLASSES[t];
       });
-      document.getElementById("tier" + tier).className = "cursor-pointer border-2 rounded-xl p-3 text-center border-slate-900 bg-slate-50 transition-all shadow-sm";
+      document.getElementById("tier" + tier).className = TIER_CARD_CLASSES[tier];
 
       const statusMsg = document.getElementById("paymentStatusMsg");
       const paymentDetails = document.getElementById("paidPaymentDetails");
@@ -284,8 +404,11 @@
       document.getElementById("gcashRefInput").value = "";
       document.getElementById("payerNameInput").value = "";
       try {
-        const res = await fetch(`${API_URL}?action=checkPaidCapacity&email=${encodeURIComponent(currentUserEmail)}`);
-        const data = await res.json();
+        const data = await postApi({
+          action: "checkPaidCapacity",
+          email: currentUserEmail,
+          token: localStorage.getItem(SESSION_TOKEN_KEY) || ""
+        });
         if (requestId !== capacityCheckId) return;
         if (data.paymentPending) {
           statusMsg.innerText = data.message || "Your payment application is already awaiting review. Please allow up to 24 hours for an update.";
@@ -330,7 +453,7 @@
         const res = await fetch(`${API_URL}?action=sendOtp&email=${encodeURIComponent(email)}`);
         const data = await res.json();
         if (data.success) {
-          currentUserEmail = email;
+          currentUserEmail = email.toLowerCase();
           document.getElementById("emailStep").classList.add("hidden");
           document.getElementById("otpStep").classList.remove("hidden");
         } else {
@@ -350,15 +473,20 @@
 
       document.getElementById("verifyOtpBtn").innerText = "Verifying code...";
       try {
-        const res = await fetch(`${API_URL}?action=verifyOtp&email=${encodeURIComponent(currentUserEmail)}&otp=${encodeURIComponent(otp)}`);
+        const query = new URLSearchParams({
+          action: "verifyOtp",
+          email: currentUserEmail,
+          otp: otp
+        });
+        const res = await fetch(`${API_URL}?${query}`);
         const data = await res.json();
-        if (data.success) {
-          document.getElementById("authView").classList.add("hidden");
-          document.getElementById("dashboardView").classList.remove("hidden");
-          document.getElementById("userAuthDisplay").innerText = currentUserEmail;
-          executeSearch(); // Load initial search
+        if (data.success && data.sessionToken) {
+          currentUserEmail = data.email || currentUserEmail;
+          localStorage.setItem(SESSION_EMAIL_KEY, currentUserEmail);
+          localStorage.setItem(SESSION_TOKEN_KEY, data.sessionToken);
+          showDashboard(currentUserEmail);
         } else {
-          errEl.innerText = data.message;
+          errEl.innerText = data.message || "Verification did not return a saved session. Please try again.";
         }
       } catch (e) {
         errEl.innerText = "Verification failed.";
@@ -367,14 +495,24 @@
     }
 
     async function executeSearch() {
+      hideJobTitleSuggestions();
       const position = document.getElementById("searchPosition").value.trim();
       const country = document.getElementById("searchCountry").value.trim();
       const container = document.getElementById("resultsContainer");
+      if (!position && !country) {
+        container.innerText = "Enter a job title or destination to search for matching listings.";
+        return;
+      }
       container.innerHTML = `<div class="col-span-2 text-center py-8 text-xs text-slate-500">Searching job listings...</div>`;
 
       try {
-        const res = await fetch(`${API_URL}?action=search&email=${encodeURIComponent(currentUserEmail)}&position=${encodeURIComponent(position)}&country=${encodeURIComponent(country)}`);
-        const data = await res.json();
+        const data = await postApi({
+          action: "search",
+          email: currentUserEmail,
+          token: localStorage.getItem(SESSION_TOKEN_KEY) || "",
+          position: position,
+          country: country
+        });
 
         if (data.paywallRequired || data.dailyLimitReached) {
           document.getElementById("paywallReason").innerText = data.message;
@@ -389,7 +527,10 @@
         }
 
         // Update Header stats
-        document.getElementById("tierBadge").innerText = "Tier: " + data.userTier;
+        const tierBadge = document.getElementById("tierBadge");
+        tierBadge.innerText = "Tier: " + (data.userTier === "Free" ? "Free Trial" : data.userTier);
+        tierBadge.className = "px-3 py-1 rounded-full border text-xs font-semibold " +
+          (TIER_BADGE_CLASSES[data.userTier] || TIER_BADGE_CLASSES.Free);
         document.getElementById("searchLimitDisplay").innerText = `Searches today: ${data.searchesUsedToday} / ${data.dailyLimit}`;
 
         if (data.results.length === 0) {
@@ -400,35 +541,174 @@
         // Render Results
         container.innerHTML = "";
         data.results.forEach(job => {
+          const applyUrl = safeExternalUrl(job.officialApplyUrl);
+          const priorityTier = job.priorityTier || "Not specified";
+          const sponsorshipBadge = job.sponsorshipBadge || "No sponsorship details provided by the source.";
+          const dmwNotice = job.dmwNotice || "No source-specific DMW notice provided.";
+          const applyLink = applyUrl
+            ? `<a href="${escapeHtml(applyUrl)}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors">View original listing ↗</a>`
+            : `<span class="text-xs text-slate-500">Original listing link unavailable</span>`;
           container.innerHTML += `
-            <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-3 flex flex-col justify-between">
-              <div>
+            <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div class="space-y-3">
                 <div class="mb-2">
                   <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                     Check details with employer
                   </span>
                 </div>
-                <h3 class="text-lg font-bold text-slate-900">${job.jobTitle}</h3>
-                <p class="text-sm font-semibold text-slate-700 mt-1">${job.employerName}</p>
+                <h3 class="text-lg font-bold text-slate-900">${escapeHtml(job.jobTitle)}</h3>
+                <p class="text-sm font-semibold text-slate-700 mt-1">${escapeHtml(job.employerName)}</p>
                 <div class="mt-2 text-xs text-slate-600 bg-slate-50 p-2 rounded-md border border-slate-200">
-                  📍 ${job.cityOrRegion}, ${job.country}
+                  📍 ${escapeHtml(job.cityOrRegion)}, ${escapeHtml(job.country)}
                 </div>
-                <div class="mt-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
-                  <strong>Philippine deployment reminder:</strong> Rules and requirements depend on your circumstances. Confirm current requirements directly with the DMW or other relevant authorities.
-                </div>
+                <dl class="space-y-3 border-t border-slate-100 pt-3">
+                  <div>
+                    <dt class="text-xs font-bold uppercase tracking-wide text-slate-700">Priority tier <span class="normal-case font-normal text-slate-500">(${escapeHtml(priorityTier)})</span></dt>
+                    <dd class="mt-1 text-xs leading-5 text-slate-600">An internal listing-priority label to help organise results. It is not a sponsorship rating or a guarantee of eligibility.</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs font-bold uppercase tracking-wide text-slate-700">Sponsorship information</dt>
+                    <dd class="mt-1 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">${escapeHtml(sponsorshipBadge)}</dd>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">This is source text or a keyword-match note, not confirmation that the employer will sponsor or hire applicants from the Philippines. Verify directly with the employer.</p>
+                  </div>
+                  <div>
+                    <dt class="text-xs font-bold uppercase tracking-wide text-slate-700">DMW notice</dt>
+                    <dd class="mt-1 text-xs leading-5 text-slate-600">${escapeHtml(dmwNotice)}</dd>
+                    <p class="mt-1 text-[11px] leading-5 text-slate-500">A reminder to independently check current Philippine overseas employment and deployment requirements with the DMW or relevant authority.</p>
+                  </div>
+                </dl>
               </div>
-              <div class="pt-3 border-t border-slate-100 flex justify-end">
-                <a href="${job.officialApplyUrl}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors">
-                  View original listing ↗
-                </a>
+              <div class="mt-4 border-t border-slate-100 pt-3 flex justify-end">
+                ${applyLink}
               </div>
             </article>
           `;
         });
+        launchConfetti();
 
       } catch (e) {
         container.innerHTML = `<div class="col-span-2 text-center py-8 text-xs text-red-600">Error executing search. Check Apps Script URL configuration.</div>`;
       }
+    }
+
+    function launchConfetti() {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+      const colors = ["#2563eb", "#0d9488", "#f59e0b", "#e11d48", "#7c3aed", "#16a34a"];
+      const burst = document.createElement("div");
+      burst.setAttribute("aria-hidden", "true");
+      for (let index = 0; index < 36; index++) {
+        const piece = document.createElement("span");
+        piece.className = "confetti-piece";
+        piece.style.backgroundColor = colors[index % colors.length];
+        piece.style.setProperty("--confetti-x", `${Math.round(Math.random() * 440 - 220)}px`);
+        piece.style.setProperty("--confetti-y", `${Math.round(Math.random() * 420 + 100)}px`);
+        piece.style.setProperty("--confetti-rotation", `${Math.round(Math.random() * 900 - 450)}deg`);
+        piece.style.animationDelay = `${Math.random() * 180}ms`;
+        burst.appendChild(piece);
+      }
+
+      document.body.appendChild(burst);
+      window.setTimeout(() => burst.remove(), 1800);
+    }
+
+    function hideJobTitleSuggestions() {
+      suggestionRequestId++;
+      jobTitleSuggestions = [];
+      const list = document.getElementById("jobTitleSuggestions");
+      const input = document.getElementById("searchPosition");
+      list.classList.add("hidden");
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+      activeSuggestionIndex = -1;
+    }
+
+    function renderJobTitleSuggestions(suggestions) {
+      const list = document.getElementById("jobTitleSuggestions");
+      const input = document.getElementById("searchPosition");
+      list.replaceChildren();
+      jobTitleSuggestions = suggestions;
+      activeSuggestionIndex = -1;
+
+      suggestions.forEach((suggestion, index) => {
+        const option = document.createElement("li");
+        option.id = `job-title-suggestion-${index}`;
+        option.setAttribute("role", "option");
+        option.className = "cursor-pointer px-3 py-2 text-xs text-slate-700 hover:bg-blue-50";
+        option.textContent = suggestion;
+        option.addEventListener("mousedown", event => event.preventDefault());
+        option.addEventListener("click", () => selectJobTitleSuggestion(index));
+        list.appendChild(option);
+      });
+
+      if (suggestions.length) {
+        list.classList.remove("hidden");
+        input.setAttribute("aria-expanded", "true");
+      } else {
+        hideJobTitleSuggestions();
+      }
+    }
+
+    function predictJobTitles() {
+      const queryText = document.getElementById("searchPosition").value.trim();
+      clearTimeout(suggestionTimer);
+      hideJobTitleSuggestions();
+      const requestId = suggestionRequestId;
+      if (queryText.length < 2) {
+        return;
+      }
+
+      suggestionTimer = setTimeout(async () => {
+        try {
+          const data = await postApi({
+            action: "suggestJobTitles",
+            email: currentUserEmail,
+            token: localStorage.getItem(SESSION_TOKEN_KEY) || "",
+            query: queryText
+          });
+          if (requestId === suggestionRequestId && data.success) {
+            renderJobTitleSuggestions(data.suggestions || []);
+          }
+        } catch (e) {
+          if (requestId === suggestionRequestId) hideJobTitleSuggestions();
+        }
+      }, 180);
+    }
+
+    function selectJobTitleSuggestion(index) {
+      if (index < 0 || index >= jobTitleSuggestions.length) return;
+      document.getElementById("searchPosition").value = jobTitleSuggestions[index];
+      hideJobTitleSuggestions();
+      executeSearch();
+    }
+
+    function handlePositionKeydown(event) {
+      if (event.key === "Escape") {
+        hideJobTitleSuggestions();
+        return;
+      }
+      if (event.key === "ArrowDown" && jobTitleSuggestions.length) {
+        event.preventDefault();
+        activeSuggestionIndex = (activeSuggestionIndex + 1) % jobTitleSuggestions.length;
+      } else if (event.key === "ArrowUp" && jobTitleSuggestions.length) {
+        event.preventDefault();
+        activeSuggestionIndex = activeSuggestionIndex <= 0
+          ? jobTitleSuggestions.length - 1
+          : activeSuggestionIndex - 1;
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        if (activeSuggestionIndex >= 0) selectJobTitleSuggestion(activeSuggestionIndex);
+        else executeSearch();
+        return;
+      } else {
+        return;
+      }
+
+      const input = document.getElementById("searchPosition");
+      input.setAttribute("aria-activedescendant", `job-title-suggestion-${activeSuggestionIndex}`);
+      Array.from(document.querySelectorAll("#jobTitleSuggestions [role=option]")).forEach((option, index) => {
+        option.classList.toggle("bg-blue-100", index === activeSuggestionIndex);
+      });
     }
 
     async function submitGcashPayment() {
@@ -469,18 +749,14 @@
       submitButton.innerText = "Submitting...";
 
       try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({
-            action: "submitPayment",
-            email: currentUserEmail,
-            tier: submittedTier,
-            refNumber: refNumber,
-            payerName: payerName
-          })
+        const data = await postApi({
+          action: "submitPayment",
+          email: currentUserEmail,
+          token: localStorage.getItem(SESSION_TOKEN_KEY) || "",
+          tier: submittedTier,
+          refNumber: refNumber,
+          payerName: payerName
         });
-        const data = await res.json();
         if (data.capacityFull) {
           document.getElementById("paidPaymentDetails").classList.add("hidden");
           document.getElementById("capacityModal").classList.remove("hidden");
@@ -512,6 +788,8 @@
         submitButton.innerText = "Submit GCash reference";
       }
     }
+
+    restoreSession();
   </script>
 </body>
 </html>

@@ -35,7 +35,7 @@
       <section class="space-y-2">
         <h2 class="text-lg font-semibold text-slate-900">Information we handle</h2>
         <ul class="list-disc space-y-1 pl-5 text-sm leading-6">
-          <li>Your email address and one-time verification code when you request account access.</li>
+          <li>Your email address and one-time verification code when you request account access. After verification, a session token is saved in this browser’s local storage; a hash of the token is kept in your account record so this browser can stay signed in.</li>
           <li>Job title and destination queries, and account/search usage needed to return listings and apply plan limits.</li>
           <li>If payment submissions are enabled: selected plan, email address, GCash transaction reference, and the name you provide for manual payment verification. Do not send PINs, passwords, full card details, or other sensitive information.</li>
           <li>Basic technical information may be processed by the site host and service providers to operate and secure the site; their own retention practices may apply.</li>
@@ -55,7 +55,7 @@
 
       <section class="space-y-2">
         <h2 class="text-lg font-semibold text-slate-900">Retention and security</h2>
-        <p class="text-sm leading-6">After the Apps Script backend is deployed and its cleanup trigger is installed, payment-submission rows that are at least 30 days old are scheduled for deletion. User account rows at least 30 days old are deleted when the account has neither an active paid plan nor a recent pending payment; account data is retained while needed to complete a pending payment or provide an active paid plan and becomes eligible for deletion after those needs end. The cleanup checks every six hours, so deletion occurs on a cleanup run after the 30-day mark, not necessarily at the exact moment it is reached. One-time verification codes expire after 10 minutes. This does not delete copies held in provider logs or backups, which may follow separate schedules. No internet transmission or storage method can be promised to be completely secure.</p>
+        <p class="text-sm leading-6">After the Apps Script backend is deployed and its cleanup trigger is installed, payment-submission rows that are at least 30 days old are scheduled for deletion. User account rows at least 30 days old are deleted when the account has neither an active paid plan nor a recent pending payment; account data is retained while needed to complete a pending payment or provide an active paid plan and becomes eligible for deletion after those needs end. The cleanup checks every six hours, so deletion occurs on a cleanup run after the 30-day mark, not necessarily at the exact moment it is reached. Deleting an account row also invalidates its saved browser session; a new account verification is then required. One-time verification codes expire after 10 minutes. This does not delete copies held in provider logs or backups, which may follow separate schedules. No internet transmission or storage method can be promised to be completely secure.</p>
       </section>
 
       <section class="space-y-2">
