@@ -23,6 +23,18 @@ function mentionsVisaOrRelocation(text) {
   return visaRegex.test(text);
 }
 
+function hasExplicitVisaSponsorship(text) {
+  if (!text) return false;
+
+  const negativeStatement =
+    /\b(?:no|not|without|cannot|can't|doesn't|does not|do not|don't)\s+(?:offer|provide)?\s*(?:(?:visa|work)\s+)?sponsorship\b|\bvisa sponsorship\s+(?:is\s+)?(?:not available|not provided|not offered)\b|\b(?:aucun|aucune|pas de|sans)\s+(?:sponsoring|parrainage|prise en charge|visa sponsorship)\b|\b(?:ne proposons pas|ne fournissons pas|ne prenons pas en charge)\b.{0,80}\b(?:visa|permis|autorisation)\b/i;
+  if (negativeStatement.test(text)) return false;
+
+  const explicitSupport =
+    /\bvisa sponsorship\b|\bwork permit sponsorship\b|\b(?:sponsor|sponsors|sponsored|sponsoring)\s+(?:the\s+|a\s+|your\s+)?(?:work\s+)?visa\b|\b(?:prise en charge|financement)\s+(?:de\s+la\s+|du\s+|des\s+démarches\s+de\s+|de\s+)?(?:visa|permis de travail|autorisation de travail)\b|\b(?:visa|permis de travail)\s+pris(?:e)?\s+en charge\b|\b(?:sponsoring|parrainage)\s+(?:de\s+)?(?:visa|permis de travail)\b|\b(?:employeur|l'employeur)\s+(?:prend|prendra|peut prendre)\s+en charge\b.{0,80}\b(?:visa|permis|autorisation)\b/i;
+  return explicitSupport.test(text);
+}
+
 // 1. SWEDEN: Fetch from Sweden's Official JobTech Dev API
 async function fetchSwedenJobs() {
   console.log('Fetching live jobs for Sweden...');
@@ -136,6 +148,97 @@ async function fetchEuropeanJobs() {
   }
 }
 
+// 4. FRANCE: France Travail's partner job-offer API.
+async function fetchFranceTravailJobs() {
+  if (process.env.FRANCETRAVAIL_REUSE_AUTHORIZED !== 'true') {
+    console.log('France Travail source skipped: confirm commercial reuse rights before enabling it.');
+    return [];
+  }
+
+  const clientId = process.env.FRANCETRAVAIL_API_CLIENT_ID;
+  const clientSecret = process.env.FRANCETRAVAIL_API_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error('France Travail source requires FRANCETRAVAIL_API_CLIENT_ID and FRANCETRAVAIL_API_CLIENT_SECRET.');
+  }
+
+  console.log('Fetching sponsorship-related job offers from France Travail...');
+  try {
+    const tokenResponse = await fetch(
+      'https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=%2Fpartenaire',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'client_credentials',
+          client_id: clientId,
+          client_secret: clientSecret,
+          scope: 'api_offresdemploiv2',
+        }),
+      }
+    );
+    if (!tokenResponse.ok) {
+      throw new Error(`OAuth request failed (${tokenResponse.status}): ${(await tokenResponse.text()).slice(0, 300)}`);
+    }
+
+    const tokenData = await tokenResponse.json();
+    if (!tokenData.access_token) throw new Error('France Travail OAuth response did not include an access token.');
+
+    const searchTerms = [
+      'visa sponsorship',
+      'permis de travail',
+      'autorisation de travail',
+      'prise en charge visa',
+      'sponsoring visa',
+    ];
+    const offersById = new Map();
+
+    for (const term of searchTerms) {
+      const url = new URL('https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search');
+      url.searchParams.set('motsCles', term);
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+          Range: '0-49',
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`France Travail search failed for "${term}" (${response.status}): ${(await response.text()).slice(0, 300)}`);
+      }
+
+      const data = await response.json();
+      const offers = Array.isArray(data) ? data : data.resultats;
+      if (!Array.isArray(offers)) throw new Error('France Travail response did not contain a job-offer list.');
+      for (const offer of offers) {
+        if (offer.id) offersById.set(String(offer.id), offer);
+      }
+    }
+
+    const rows = [];
+    for (const offer of offersById.values()) {
+      const headline = offer.intitule || '';
+      const description = offer.description || '';
+      if (!hasExplicitVisaSponsorship(`${headline}\n${description}`)) continue;
+
+      const employer = offer.entreprise?.nom || 'Employer not provided';
+      const isSkilled = /cnc|welder|engineer|machinist|technician|developer|mechanic|operator|electrician/i.test(headline);
+      rows.push([
+        headline,
+        'France',
+        offer.lieuTravail?.libelle || 'Location not provided',
+        employer,
+        isSkilled ? 'Priority 2' : 'Priority 1',
+        offer.origineOffre?.urlOrigine || `https://candidat.francetravail.fr/offres/recherche/detail/${encodeURIComponent(offer.id)}`,
+        'Potential explicit visa/work-permit support statement - not verified',
+        'Confirm the employer will hire applicants from the Philippines, provide work authorisation support, and meet Philippine deployment requirements'
+      ]);
+    }
+    return rows;
+  } catch (err) {
+    console.error('France Travail fetch error:', err.message);
+    return [];
+  }
+}
+
 // MAIN INGESTION PIPELINE
 async function runIngestionPipeline() {
   try {
@@ -152,6 +255,10 @@ async function runIngestionPipeline() {
     // 3. Fetch European / International jobs
     const euroJobs = await fetchEuropeanJobs();
     allJobs.push(...euroJobs);
+
+    // 4. Fetch French job offers when API access and reuse rights are configured
+    const franceJobs = await fetchFranceTravailJobs();
+    allJobs.push(...franceJobs);
 
     if (allJobs.length === 0) {
       console.log('No matching public job listings found.');
@@ -173,4 +280,6 @@ async function runIngestionPipeline() {
   }
 }
 
-runIngestionPipeline();
+if (require.main === module) runIngestionPipeline();
+
+module.exports = { fetchFranceTravailJobs, hasExplicitVisaSponsorship };

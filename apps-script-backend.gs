@@ -21,11 +21,17 @@ function doGet(e) {
     if (action === "verifyOtp") {
       return handleVerifyOtp(params.email, params.otp);
     }
+    if (action === "validateSession") {
+      return handleValidateSession(params.email, params.token);
+    }
     if (action === "search") {
-      return handleSearch(params.email, params.position, params.country);
+      return handleSearch(params.email, params.token, params.position, params.country);
+    }
+    if (action === "suggestJobTitles") {
+      return handleSuggestJobTitles(params.email, params.token, params.query);
     }
     if (action === "checkPaidCapacity") {
-      return handlePaidCapacityCheck(params.email);
+      return handlePaidCapacityCheck(params.email, params.token);
     }
     return responseJSON({ success: false, message: "Invalid API action" });
   } catch (err) {
@@ -36,8 +42,20 @@ function doGet(e) {
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
+    if (data.action === "validateSession") {
+      return handleValidateSession(data.email, data.token);
+    }
+    if (data.action === "search") {
+      return handleSearch(data.email, data.token, data.position, data.country);
+    }
+    if (data.action === "suggestJobTitles") {
+      return handleSuggestJobTitles(data.email, data.token, data.query);
+    }
+    if (data.action === "checkPaidCapacity") {
+      return handlePaidCapacityCheck(data.email, data.token);
+    }
     if (data.action === "submitPayment") {
-      return handleSubmitPayment(data.email, data.tier, data.refNumber, data.payerName);
+      return handleSubmitPayment(data.email, data.token, data.tier, data.refNumber, data.payerName);
     }
     return responseJSON({ success: false, message: "Invalid POST action" });
   } catch (err) {
@@ -70,10 +88,89 @@ function handleVerifyOtp(email, inputOtp) {
 
   if (cachedOtp && cachedOtp === inputOtp.trim()) {
     cache.remove("OTP_" + cleanEmail);
-    getOrCreateUser(cleanEmail);
-    return responseJSON({ success: true, message: "Email verified successfully" });
+    var user = getOrCreateUser(cleanEmail);
+    var sessionToken = Utilities.getUuid() + Utilities.getUuid();
+    var userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+    var sessionHeader = userSheet.getRange(1, 8).getValue();
+    if (!sessionHeader || sessionHeader === "Session Token Hash") {
+      userSheet.getRange(1, 8).setValue("Session Token Hashes");
+    }
+    var sessionHashes = getSessionTokenHashes_(userSheet.getRange(user.rowIndex, 8).getValue());
+    sessionHashes.push(hashSessionToken_(sessionToken));
+    userSheet.getRange(user.rowIndex, 8).setValue("v1:" + sessionHashes.join(","));
+    return responseJSON({
+      success: true,
+      message: "Email verified successfully",
+      email: cleanEmail,
+      sessionToken: sessionToken
+    });
   }
   return responseJSON({ success: false, message: "Invalid or expired OTP code" });
+}
+
+function hashSessionToken_(token) {
+  var digest = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    token,
+    Utilities.Charset.UTF_8
+  );
+  return Utilities.base64EncodeWebSafe(digest);
+}
+
+function getSessionTokenHashes_(storedValue) {
+  var stored = String(storedValue || "");
+  if (!stored) return [];
+  if (stored.indexOf("v1:") === 0) {
+    return stored.substring(3).split(",").filter(function(hash) { return hash !== ""; });
+  }
+  return [stored];
+}
+
+function getAuthenticatedUser_(email, token) {
+  if (!email || !token) throw new Error("Please verify your email to continue.");
+
+  var cleanEmail = String(email).trim().toLowerCase();
+  var userSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+  if (!userSheet) throw new Error('Missing "Users" sheet.');
+
+  var data = userSheet.getDataRange().getValues();
+  var tokenHash = hashSessionToken_(String(token));
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][1]).trim().toLowerCase() !== cleanEmail) continue;
+    var sessionHashes = getSessionTokenHashes_(data[i][7]);
+    var tokenIsValid = sessionHashes.indexOf(tokenHash) !== -1;
+    if (!tokenIsValid) {
+      throw new Error("Your saved session is no longer valid. Please verify your email again.");
+    }
+    return getOrCreateUser(cleanEmail);
+  }
+  throw new Error("Your saved session is no longer valid. Please verify your email again.");
+}
+
+function handleValidateSession(email, token) {
+  var user = getAuthenticatedUser_(email, token);
+  return responseJSON({ success: true, email: user.email });
+}
+
+function handleSuggestJobTitles(email, token, query) {
+  getAuthenticatedUser_(email, token);
+  var cleanQuery = String(query || "").trim().toLowerCase();
+  if (cleanQuery.length < 2) return responseJSON({ success: true, suggestions: [] });
+
+  var jobSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Job_Listings");
+  if (!jobSheet) throw new Error('Missing "Job_Listings" sheet.');
+  var jobData = jobSheet.getDataRange().getValues();
+  var seen = {};
+  var suggestions = [];
+
+  for (var i = 1; i < jobData.length && suggestions.length < 8; i++) {
+    var title = String(jobData[i][0] || "").trim();
+    var normalizedTitle = title.toLowerCase();
+    if (normalizedTitle.indexOf(cleanQuery) === -1 || seen[normalizedTitle]) continue;
+    seen[normalizedTitle] = true;
+    suggestions.push(title);
+  }
+  return responseJSON({ success: true, suggestions: suggestions });
 }
 
 function getOrCreateUser(email) {
@@ -168,8 +265,9 @@ function countOccupiedPaidSlots_(userSheet, paySheet, now) {
   return Object.keys(occupiedEmails).length;
 }
 
-function handlePaidCapacityCheck(email) {
+function handlePaidCapacityCheck(email, token) {
   if (!email) return responseJSON({ success: false, message: "Email is required" });
+  getAuthenticatedUser_(email, token);
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var userSheet = ss.getSheetByName("Users");
@@ -187,11 +285,11 @@ function handlePaidCapacityCheck(email) {
   });
 }
 
-function handleSearch(email, position, country) {
+function handleSearch(email, token, position, country) {
   if (!email) return responseJSON({ success: false, message: "Email is required" });
 
   var cleanEmail = email.trim().toLowerCase();
-  var user = getOrCreateUser(cleanEmail);
+  var user = getAuthenticatedUser_(cleanEmail, token);
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var userSheet = ss.getSheetByName("Users");
   var now = new Date();
@@ -235,11 +333,19 @@ function handleSearch(email, position, country) {
   }
 
   if (searchesToday >= allowedResults) {
+    var freeTrialLastDay = user.activeTier === "Free" && daysSinceJoined === 3;
+    var limitMessage = "You have reached your daily limit of " + allowedResults +
+      " searches for the " + (user.activeTier === "Free" ? "Free" : user.activeTier) +
+      " tier. Please try again tomorrow.";
+    if (freeTrialLastDay) {
+      limitMessage = "You have reached your daily limit of " + allowedResults +
+        " searches for the Free tier. Your free trial ends today. Choose a paid tier to continue searching.";
+    }
     return responseJSON({
       success: false,
       dailyLimitReached: true,
-      message: "You have reached your daily limit of " + allowedResults +
-        " searches for the " + user.activeTier + " tier. Please try again tomorrow or upgrade your tier."
+      paywallRequired: freeTrialLastDay,
+      message: limitMessage
     });
   }
 
@@ -247,23 +353,43 @@ function handleSearch(email, position, country) {
   if (!jobSheet) throw new Error('Missing "Job_Listings" sheet.');
   var jobData = jobSheet.getDataRange().getValues();
   var matchingJobs = [];
+  var seenListingUrls = {};
+  var seenListingDetails = {};
   var posQuery = (position || "").toLowerCase().trim();
   var countryQuery = (country || "").toLowerCase().trim();
 
   for (var i = 1; i < jobData.length; i++) {
-    var title = String(jobData[i][0] || "").toLowerCase();
-    var ctry = String(jobData[i][1] || "").toLowerCase();
+    var titleValue = String(jobData[i][0] || "").trim();
+    var countryValue = String(jobData[i][1] || "").trim();
+    var cityValue = String(jobData[i][2] || "").trim();
+    var employerValue = String(jobData[i][3] || "").trim();
+    var title = titleValue.toLowerCase();
+    var ctry = countryValue.toLowerCase();
     var matchesPos = posQuery === "" || title.indexOf(posQuery) !== -1;
     var matchesCountry = countryQuery === "" || ctry.indexOf(countryQuery) !== -1;
 
     if (matchesPos && matchesCountry) {
+      var listingUrl = String(jobData[i][5] || "").trim();
+      var normalizedUrl = listingUrl
+        ? listingUrl.split("#")[0].split("?")[0].replace(/\/+$/, "").toLowerCase()
+        : "";
+      var normalizedDetails = [
+        title,
+        countryValue.toLowerCase(),
+        cityValue.toLowerCase(),
+        employerValue.toLowerCase()
+      ].join("|");
+      if (normalizedUrl ? seenListingUrls[normalizedUrl] : seenListingDetails[normalizedDetails]) continue;
+
+      if (normalizedUrl) seenListingUrls[normalizedUrl] = true;
+      seenListingDetails[normalizedDetails] = true;
       matchingJobs.push({
-        jobTitle: jobData[i][0],
-        country: jobData[i][1],
-        cityOrRegion: jobData[i][2],
-        employerName: jobData[i][3],
+        jobTitle: titleValue,
+        country: countryValue,
+        cityOrRegion: cityValue,
+        employerName: employerValue,
         priorityTier: jobData[i][4],
-        officialApplyUrl: jobData[i][5],
+        officialApplyUrl: listingUrl,
         sponsorshipBadge: jobData[i][6],
         dmwNotice: jobData[i][7]
       });
@@ -287,10 +413,11 @@ function handleSearch(email, position, country) {
   });
 }
 
-function handleSubmitPayment(email, tier, refNumber, payerName) {
+function handleSubmitPayment(email, token, tier, refNumber, payerName) {
   if (!email || !tier || !refNumber || !payerName) {
     return responseJSON({ success: false, message: "Missing required payment parameters." });
   }
+  getAuthenticatedUser_(email, token);
   if (!Object.prototype.hasOwnProperty.call(PAID_TIERS, tier)) {
     return responseJSON({ success: false, message: "Invalid subscription tier." });
   }

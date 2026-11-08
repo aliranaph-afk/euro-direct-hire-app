@@ -67,7 +67,12 @@
   <main class="max-w-6xl mx-auto px-4 py-8 w-full flex-grow">
 
     <!-- VIEW 1: LOGIN & OTP SCREEN -->
-    <div id="authView" class="max-w-lg mx-auto mt-8 sm:mt-12 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
+    <div id="sessionRestoreView" role="status" aria-live="polite" class="mx-auto mt-12 flex max-w-lg items-center justify-center gap-3 text-sm text-slate-600">
+      <span aria-hidden="true" class="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-blue-900"></span>
+      <span>Checking your saved sign-in…</span>
+    </div>
+
+    <div id="authView" class="hidden max-w-lg mx-auto mt-8 sm:mt-12 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/70">
       <div class="px-6 pt-8 sm:px-10 sm:pt-10">
         <div class="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-900 ring-1 ring-blue-100">
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" class="h-6 w-6" stroke="currentColor" stroke-width="1.8">
@@ -351,6 +356,7 @@
 
     function showDashboard(email) {
       currentUserEmail = email;
+      document.getElementById("sessionRestoreView").classList.add("hidden");
       document.getElementById("authView").classList.add("hidden");
       document.getElementById("dashboardView").classList.remove("hidden");
       document.getElementById("userAuthDisplay").innerText = email;
@@ -359,10 +365,18 @@
         "Enter a job title or destination to search for matching listings.";
     }
 
+    function showAuthView() {
+      document.getElementById("sessionRestoreView").classList.add("hidden");
+      document.getElementById("authView").classList.remove("hidden");
+    }
+
     async function restoreSession() {
       const email = localStorage.getItem(SESSION_EMAIL_KEY);
       const token = localStorage.getItem(SESSION_TOKEN_KEY);
-      if (!email || !token) return;
+      if (!email || !token) {
+        showAuthView();
+        return;
+      }
 
       currentUserEmail = email;
       try {
@@ -374,8 +388,10 @@
           localStorage.removeItem(SESSION_TOKEN_KEY);
           document.getElementById("loginEmail").value = email;
           currentUserEmail = "";
+          showAuthView();
         }
       } catch (e) {
+        showAuthView();
         document.getElementById("authError").innerText =
           "Could not restore your saved session. Check your connection and try again.";
       }
@@ -516,10 +532,16 @@
           country: country
         });
 
-        if (data.paywallRequired || data.dailyLimitReached) {
+        if (data.paywallRequired) {
           document.getElementById("paywallReason").innerText = data.message;
           document.getElementById("paywallModal").classList.remove("hidden");
           container.innerHTML = "";
+          return;
+        }
+
+        if (data.dailyLimitReached) {
+          document.getElementById("paywallModal").classList.add("hidden");
+          container.innerHTML = `<div class="col-span-1 md:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-950" role="status">${escapeHtml(data.message)}</div>`;
           return;
         }
 
