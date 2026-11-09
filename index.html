@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self' https:; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
   <title>EuroDirect-Hire | European Job Search</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <!-- Tailwind CSS CDN -->
@@ -171,6 +172,12 @@
       </div>
       <div class="flex flex-wrap items-center justify-end gap-2">
         <div id="userAuthDisplay" class="text-xs font-semibold text-slate-600"></div>
+        <button id="reviewQueueBtn" type="button" onclick="openReviewQueue()" class="hidden rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-800">
+          Review queue
+        </button>
+        <button id="signOutBtn" type="button" onclick="signOut()" class="hidden rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-800">
+          Sign out
+        </button>
       </div>
     </div>
   </header>
@@ -218,6 +225,14 @@
             <label for="loginOtp" class="mb-2 block text-sm font-semibold text-slate-800">6-digit verification code</label>
             <input type="text" id="loginOtp" inputmode="numeric" autocomplete="one-time-code" placeholder="000000" maxlength="6" aria-describedby="otpHelp" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-center font-mono text-xl tracking-[0.35em] text-slate-900 shadow-sm transition focus:border-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-900/10">
             <p id="otpHelp" class="mt-2 text-xs leading-5 text-slate-500">Enter the code we sent to your email address.</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="resendOtp()" type="button" class="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200">
+              Resend code
+            </button>
+            <button onclick="showEmailStep()" type="button" class="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200">
+              Change email
+            </button>
           </div>
           <button onclick="verifyOtp()" id="verifyOtpBtn" class="w-full rounded-xl bg-blue-950 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900 focus:outline-none focus:ring-4 focus:ring-blue-900/20">
             Verify and sign in
@@ -299,6 +314,8 @@
         </div>
       </div>
 
+      <div id="sourceTrustSummary" class="hidden rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm"></div>
+
       <!-- SEARCH RESULTS CONTAINER -->
       <div id="resultsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4" aria-live="polite">
         <!-- Populated via JS -->
@@ -306,6 +323,21 @@
     </div>
 
   </main>
+
+  <div id="auditSummaryModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+    <div class="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Operations overview</p>
+          <h2 class="mt-1 text-xl font-bold text-slate-900">Payment review queue</h2>
+        </div>
+        <button type="button" onclick="closeAuditSummary()" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-800">
+          Close
+        </button>
+      </div>
+      <div id="auditSummaryContent" class="mt-4"></div>
+    </div>
+  </div>
 
   <!-- PAYWALL MODAL (Triggered on Day 4 or limit reached) -->
   <div id="paywallModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
@@ -431,6 +463,9 @@
     let jobTitleSuggestions = [];
     const SESSION_EMAIL_KEY = "euroDirectHireEmail";
     const SESSION_TOKEN_KEY = "euroDirectHireSessionToken";
+    const SESSION_TIMESTAMP_KEY = "euroDirectHireSessionTimestamp";
+    const OTP_COOLDOWN_KEY = "euroDirectHireOtpCooldown";
+    const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
     const THEME_KEY = "euroDirectHireTheme";
     const TIER_BADGE_CLASSES = {
       Free: "bg-blue-100 text-blue-900 border-blue-200",
@@ -514,12 +549,20 @@
     }
 
     async function postApi(payload) {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload)
-      });
-      return response.json();
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error("The service returned an error.");
+        return await response.json();
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
     }
 
     function escapeHtml(value) {
@@ -541,12 +584,89 @@
       }
     }
 
-    function showDashboard(email) {
+    function getSourceTrustInfo(rawUrl) {
+      const domain = (() => {
+        try {
+          return new URL(rawUrl || "").hostname.toLowerCase();
+        } catch (e) {
+          return "";
+        }
+      })();
+
+      const trustMap = [
+        { pattern: /(?:^|\.)gov\./, score: 96, label: "Official public board", note: "Usually the most direct and verifiable source." },
+        { pattern: /(?:^|\.)(?:linkedin|indeed|glassdoor|workable|greenhouse|lever|jobs\.eu|europa\.eu|francetravail|jobtechdev|tyomarkkinatori|jobicy)/, score: 84, label: "Reputable listing source", note: "Strong listing source but still verify employer and sponsorship terms." },
+        { pattern: /(?:^|\.)(?:jobstreet|career|workin|jobs\.com|ziprecruiter|recruiter|myworkdayjobs)/, score: 72, label: "Public job platform", note: "Useful, but check the employer page and direct application instructions." },
+        { pattern: /(?:^|\.)(?:remote|startup|agency|portal|company|example|test)/, score: 54, label: "Mixed trust source", note: "Higher chance of stale or generic listings; verify before applying." },
+      ];
+
+      const knownMatch = trustMap.find(item => item.pattern.test(domain));
+      if (knownMatch) return knownMatch;
+      if (!domain) return { score: 45, label: "Unverified source", note: "Source details are incomplete; verify directly with the employer." };
+
+      return { score: 62, label: "Public listing source", note: "Mostly useful for discovery, but treat it as an indication rather than a confirmed job." };
+    }
+
+    function summarizeSourceTrust(results) {
+      if (!Array.isArray(results) || results.length === 0) return null;
+
+      const counts = { high: 0, medium: 0, low: 0 };
+      const total = results.length;
+
+      results.forEach(job => {
+        const trust = getSourceTrustInfo(job.officialApplyUrl);
+        if (trust.score >= 80) counts.high += 1;
+        else if (trust.score >= 60) counts.medium += 1;
+        else counts.low += 1;
+      });
+
+      return {
+        total,
+        high: counts.high,
+        medium: counts.medium,
+        low: counts.low,
+        overall: Math.round((counts.high * 100 + counts.medium * 70 + counts.low * 45) / total)
+      };
+    }
+
+    function renderSourceTrustSummary(results) {
+      const summaryEl = document.getElementById("sourceTrustSummary");
+      const summary = summarizeSourceTrust(results);
+      if (!summary || !summaryEl) {
+        if (summaryEl) summaryEl.classList.add("hidden");
+        return;
+      }
+
+      summaryEl.classList.remove("hidden");
+      summaryEl.innerHTML = `
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Source quality snapshot</p>
+            <p class="mt-1 text-sm font-semibold text-slate-800">Average confidence: ${summary.overall}% across ${summary.total} listings</p>
+          </div>
+          <div class="flex flex-wrap gap-2 text-[10px] font-semibold">
+            <span class="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-emerald-800">High trust: ${summary.high}</span>
+            <span class="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800">Medium trust: ${summary.medium}</span>
+            <span class="rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-rose-800">Low trust: ${summary.low}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function clearStoredSession() {
+      localStorage.removeItem(SESSION_EMAIL_KEY);
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      localStorage.removeItem(SESSION_TIMESTAMP_KEY);
+    }
+
+    function showDashboard(email, isAdmin) {
       currentUserEmail = email;
       document.getElementById("sessionRestoreView").classList.add("hidden");
       document.getElementById("authView").classList.add("hidden");
       document.getElementById("dashboardView").classList.remove("hidden");
       document.getElementById("userAuthDisplay").innerText = email;
+      document.getElementById("signOutBtn").classList.remove("hidden");
+      document.getElementById("reviewQueueBtn").classList.toggle("hidden", !isAdmin);
       document.getElementById("dashboardGreeting").innerText = "Welcome back, " + email + "!";
       document.getElementById("resultsContainer").innerText =
         "Enter a job title or destination to search for matching listings.";
@@ -555,12 +675,23 @@
     function showAuthView() {
       document.getElementById("sessionRestoreView").classList.add("hidden");
       document.getElementById("authView").classList.remove("hidden");
+      document.getElementById("dashboardView").classList.add("hidden");
+      document.getElementById("signOutBtn").classList.add("hidden");
+      document.getElementById("reviewQueueBtn").classList.add("hidden");
+      document.getElementById("userAuthDisplay").innerText = "";
     }
 
     async function restoreSession() {
       const email = localStorage.getItem(SESSION_EMAIL_KEY);
       const token = localStorage.getItem(SESSION_TOKEN_KEY);
-      if (!email || !token) {
+      const sessionTimestamp = Number(localStorage.getItem(SESSION_TIMESTAMP_KEY) || "0");
+      const isSessionFresh = Boolean(email && token && sessionTimestamp && (Date.now() - sessionTimestamp) <= SESSION_TTL_MS);
+
+      if (!email || !token || !isSessionFresh) {
+        clearStoredSession();
+        if (email && !token) {
+          document.getElementById("loginEmail").value = email;
+        }
         showAuthView();
         return;
       }
@@ -569,10 +700,9 @@
       try {
         const data = await postApi({ action: "validateSession", email: email, token: token });
         if (data.success) {
-          showDashboard(data.email || email);
+          showDashboard(data.email || email, data.isAdmin === true);
         } else {
-          localStorage.removeItem(SESSION_EMAIL_KEY);
-          localStorage.removeItem(SESSION_TOKEN_KEY);
+          clearStoredSession();
           document.getElementById("loginEmail").value = email;
           currentUserEmail = "";
           showAuthView();
@@ -647,20 +777,48 @@
       modal.classList.remove("flex");
     }
 
+    function showEmailStep() {
+      document.getElementById("emailStep").classList.remove("hidden");
+      document.getElementById("otpStep").classList.add("hidden");
+      document.getElementById("authError").innerText = "";
+      document.getElementById("loginOtp").value = "";
+    }
+
+    async function resendOtp() {
+      document.getElementById("authError").innerText = "";
+      const email = (currentUserEmail || document.getElementById("loginEmail").value.trim()).toLowerCase();
+      if (!email) {
+        showEmailStep();
+        document.getElementById("authError").innerText = "Please enter a valid email address.";
+        return;
+      }
+      document.getElementById("loginEmail").value = email;
+      await sendOtp();
+    }
+
     async function sendOtp() {
       const email = document.getElementById("loginEmail").value.trim();
       const errEl = document.getElementById("authError");
       errEl.innerText = "";
       if (!email) { errEl.innerText = "Please enter a valid email address."; return; }
 
+      const cooldownUntil = Number(localStorage.getItem(OTP_COOLDOWN_KEY) || "0");
+      const now = Date.now();
+      if (cooldownUntil && now - cooldownUntil < 60000) {
+        const remainingSeconds = Math.ceil((60000 - (now - cooldownUntil)) / 1000);
+        errEl.innerText = `Please wait ${remainingSeconds} seconds before requesting another code.`;
+        return;
+      }
+
+      localStorage.setItem(OTP_COOLDOWN_KEY, String(now));
       document.getElementById("sendOtpBtn").innerText = "Sending code...";
       try {
-        const res = await fetch(`${API_URL}?action=sendOtp&email=${encodeURIComponent(email)}`);
-        const data = await res.json();
+        const data = await postApi({ action: "sendOtp", email: email });
         if (data.success) {
           currentUserEmail = email.toLowerCase();
           document.getElementById("emailStep").classList.add("hidden");
           document.getElementById("otpStep").classList.remove("hidden");
+          document.getElementById("loginOtp").value = "";
         } else {
           errEl.innerText = data.message;
         }
@@ -668,6 +826,106 @@
         errEl.innerText = "Network error connecting to backend.";
       }
       document.getElementById("sendOtpBtn").innerText = "Continue with email";
+    }
+
+    async function signOut() {
+      const email = currentUserEmail;
+      const token = localStorage.getItem(SESSION_TOKEN_KEY) || "";
+      let revokeFailed = false;
+      if (email && token) {
+        try {
+          const result = await postApi({ action: "revokeSession", email: email, token: token });
+          revokeFailed = !result.success;
+        } catch (error) {
+          revokeFailed = true;
+        }
+      }
+      clearStoredSession();
+      currentUserEmail = "";
+      document.getElementById("loginEmail").value = "";
+      document.getElementById("loginOtp").value = "";
+      document.getElementById("authError").innerText = "";
+      showAuthView();
+      if (revokeFailed) {
+        document.getElementById("authError").innerText =
+          "Signed out on this device, but the server session could not be revoked. Sign in again when you are ready.";
+      }
+    }
+
+    async function openReviewQueue() {
+      const modal = document.getElementById("auditSummaryModal");
+      const summaryBox = document.getElementById("auditSummaryContent");
+      if (!modal || !summaryBox) return;
+
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      summaryBox.innerHTML = '<div class="text-sm text-slate-500">Loading payment review summary…</div>';
+
+      try {
+        const data = await postApi({
+          action: "getAuditSummary",
+          email: currentUserEmail,
+          token: localStorage.getItem(SESSION_TOKEN_KEY) || ""
+        });
+        if (!data || !data.success) {
+          throw new Error(data && data.message ? data.message : "Unable to load the review queue.");
+        }
+
+        const summary = data.summary || {};
+        const recentAudit = Array.isArray(summary.recentAudit) ? summary.recentAudit : [];
+        const statCards = [
+          { label: "Users", value: summary.totalUsers || 0 },
+          { label: "Active paid", value: summary.activePaidUsers || 0 },
+          { label: "Pending", value: summary.pendingPayments || 0 },
+          { label: "Verified", value: summary.verifiedPayments || 0 },
+          { label: "Rejected", value: summary.rejectedPayments || 0 },
+          { label: "Listings", value: summary.totalListings || 0 }
+        ];
+
+        summaryBox.innerHTML = `
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            ${statCards.map(stat => `
+              <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div class="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">${escapeHtml(stat.label)}</div>
+                <div class="mt-2 text-xl font-bold text-slate-900">${Number(stat.value) || 0}</div>
+              </div>
+            `).join("")}
+          </div>
+          <div class="mt-5 rounded-xl border border-slate-200 bg-white p-3">
+            <div class="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Recent audit activity</div>
+            ${recentAudit.length ? `
+              <div class="space-y-2">
+                ${recentAudit.slice().reverse().map(item => `
+                  <div class="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-semibold text-slate-800">${escapeHtml(item.event || "Audit event")}</span>
+                      <span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">${escapeHtml(item.status || "")}</span>
+                    </div>
+                    <div class="mt-1 text-[11px] text-slate-500">${escapeHtml(item.timestamp || "")}</div>
+                    <div class="mt-1">${escapeHtml(item.email || "Unknown user")}</div>
+                    <div class="mt-1">Tier: ${escapeHtml(item.tier || "—")} • Ref: ${escapeHtml(item.reference || "—")}</div>
+                    ${item.actor ? `<div class="mt-1 text-[11px] text-slate-500">Actor: ${escapeHtml(item.actor)}</div>` : ""}
+                    ${item.note ? `<div class="mt-1 text-[11px] text-slate-600">${escapeHtml(item.note)}</div>` : ""}
+                  </div>
+                `).join("")}
+              </div>
+            ` : '<p class="text-sm text-slate-500">No payment review activity recorded yet.</p>'}
+          </div>
+        `;
+      } catch (error) {
+        summaryBox.innerHTML = `
+          <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            ${escapeHtml(error.message || "Unable to access the payment review queue.")}
+          </div>
+        `;
+      }
+    }
+
+    function closeAuditSummary() {
+      const modal = document.getElementById("auditSummaryModal");
+      if (!modal) return;
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
     }
 
     async function verifyOtp() {
@@ -678,18 +936,17 @@
 
       document.getElementById("verifyOtpBtn").innerText = "Verifying code...";
       try {
-        const query = new URLSearchParams({
+        const data = await postApi({
           action: "verifyOtp",
           email: currentUserEmail,
           otp: otp
         });
-        const res = await fetch(`${API_URL}?${query}`);
-        const data = await res.json();
         if (data.success && data.sessionToken) {
           currentUserEmail = data.email || currentUserEmail;
           localStorage.setItem(SESSION_EMAIL_KEY, currentUserEmail);
           localStorage.setItem(SESSION_TOKEN_KEY, data.sessionToken);
-          showDashboard(currentUserEmail);
+          localStorage.setItem(SESSION_TIMESTAMP_KEY, String(Date.now()));
+          showDashboard(currentUserEmail, data.isAdmin === true);
         } else {
           errEl.innerText = data.message || "Verification did not return a saved session. Please try again.";
         }
@@ -751,20 +1008,27 @@
 
         // Render Results
         container.innerHTML = "";
+        renderSourceTrustSummary(data.results);
         data.results.forEach(job => {
           const applyUrl = safeExternalUrl(job.officialApplyUrl);
           const priorityTier = job.priorityTier || "Not specified";
           const sponsorshipBadge = job.sponsorshipBadge || "No sponsorship details provided by the source.";
           const dmwNotice = job.dmwNotice || "No source-specific DMW notice provided.";
+          const sourceTrust = getSourceTrustInfo(job.officialApplyUrl);
+          const trustLabel = `${sourceTrust.score}% • ${sourceTrust.label}`;
+          const trustClass = sourceTrust.score >= 80 ? "border-emerald-200 bg-emerald-50 text-emerald-800" : sourceTrust.score >= 60 ? "border-amber-200 bg-amber-50 text-amber-800" : "border-rose-200 bg-rose-50 text-rose-800";
           const applyLink = applyUrl
             ? `<a href="${escapeHtml(applyUrl)}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors">View original listing ↗</a>`
             : `<span class="text-xs text-slate-500">Original listing link unavailable</span>`;
           container.innerHTML += `
             <article class="rounded-xl border-2 border-slate-400 bg-white p-5 shadow-sm">
               <div class="space-y-3">
-                <div class="mb-2">
+                <div class="flex flex-wrap items-center justify-between gap-2">
                   <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                     Check details with employer
+                  </span>
+                  <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${trustClass}">
+                    Source trust: ${escapeHtml(trustLabel)}
                   </span>
                 </div>
                 <h3 class="text-lg font-bold text-slate-900">${escapeHtml(job.jobTitle)}</h3>
@@ -776,6 +1040,10 @@
                   <div>
                     <dt class="text-xs font-bold uppercase tracking-wide text-slate-700">Priority tier <span class="normal-case font-normal text-slate-500">(${escapeHtml(priorityTier)})</span></dt>
                     <dd class="mt-1 text-xs leading-5 text-slate-600">An internal listing-priority label to help organise results. It is not a sponsorship rating or a guarantee of eligibility.</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs font-bold uppercase tracking-wide text-slate-700">Source quality note</dt>
+                    <dd class="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-700">${escapeHtml(sourceTrust.note)}</dd>
                   </div>
                   <div>
                     <dt class="text-xs font-bold uppercase tracking-wide text-slate-700">Sponsorship information</dt>

@@ -1,14 +1,52 @@
 require('dotenv').config();
+const fs = require('node:fs');
+const path = require('node:path');
 const { google } = require('googleapis');
 
 const SPREADSHEET_ID = '18GaEB6pzvl_5IWgNeRjF60Y2K6XP0yUximKXoVVuCKk';
 
-async function getSheetsClient() {
-  const secretString = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-  if (!secretString) {
-    throw new Error('Missing GOOGLE_SERVICE_ACCOUNT_KEY environment variable.');
+function resolveServiceAccountCredentials() {
+  const candidates = [
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+    process.env.GOOGLE_SERVICE_ACCOUNT_KEY,
+    process.env.GCP_SERVICE_ACCOUNT_JSON,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate || !candidate.trim()) continue;
+    try {
+      return JSON.parse(candidate);
+    } catch (error) {
+      const trimmed = candidate.trim();
+      if (trimmed.startsWith('{')) {
+        throw new Error(`Invalid Google service account JSON in environment: ${error.message}`);
+      }
+    }
   }
-  const credentials = JSON.parse(secretString);
+
+  const fileCandidates = [
+    path.resolve(process.cwd(), 'service_account.json'),
+    path.resolve(process.cwd(), 'google-service-account.json'),
+  ];
+
+  for (const filePath of fileCandidates) {
+    if (!fs.existsSync(filePath)) continue;
+    const raw = fs.readFileSync(filePath, 'utf8').trim();
+    if (!raw) continue;
+    try {
+      return JSON.parse(raw);
+    } catch (error) {
+      throw new Error(`Invalid Google service account JSON in ${filePath}: ${error.message}`);
+    }
+  }
+
+  throw new Error(
+    'Missing Google service account credentials. Set GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_SERVICE_ACCOUNT_KEY.'
+  );
+}
+
+async function getSheetsClient() {
+  const credentials = resolveServiceAccountCredentials();
   const auth = new google.auth.GoogleAuth({
     credentials,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
@@ -33,6 +71,41 @@ function hasExplicitVisaSponsorship(text) {
   const explicitSupport =
     /\bvisa sponsorship\b|\bwork permit sponsorship\b|\b(?:sponsor|sponsors|sponsored|sponsoring)\s+(?:the\s+|a\s+|your\s+)?(?:work\s+)?visa\b|\b(?:prise en charge|financement)\s+(?:de\s+la\s+|du\s+|des\s+démarches\s+de\s+|de\s+)?(?:visa|permis de travail|autorisation de travail)\b|\b(?:visa|permis de travail)\s+pris(?:e)?\s+en charge\b|\b(?:sponsoring|parrainage)\s+(?:de\s+)?(?:visa|permis de travail)\b|\b(?:employeur|l'employeur)\s+(?:prend|prendra|peut prendre)\s+en charge\b.{0,80}\b(?:visa|permis|autorisation)\b/i;
   return explicitSupport.test(text);
+}
+
+function normalizeText(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function normalizeSourceUrl(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(value);
+    url.search = '';
+    url.hash = '';
+    return normalizeText(url.toString().replace(/\/+$/, ''));
+  } catch (error) {
+    return normalizeText(String(value).split('#')[0].split('?')[0].replace(/\/+$/, ''));
+  }
+}
+
+function dedupeJobRows(rows) {
+  const seen = new Map();
+  const uniqueRows = [];
+
+  for (const row of rows || []) {
+    const title = normalizeText(row[0]);
+    const country = normalizeText(row[1]);
+    const location = normalizeText(row[2]);
+    const employer = normalizeText(row[3]);
+    const sourceUrl = normalizeSourceUrl(row[5]);
+    const key = [title, country, location, employer, sourceUrl || normalizeText(row[6])].join('|');
+    if (!key || seen.has(key)) continue;
+    seen.set(key, true);
+    uniqueRows.push(row);
+  }
+
+  return uniqueRows;
 }
 
 // 1. SWEDEN: Fetch from Sweden's Official JobTech Dev API
@@ -242,37 +315,48 @@ async function fetchFranceTravailJobs() {
 // MAIN INGESTION PIPELINE
 async function runIngestionPipeline() {
   try {
+    const fetchers = [
+      { name: 'Sweden', fetcher: fetchSwedenJobs },
+      { name: 'Finland', fetcher: fetchFinlandJobs },
+      { name: 'Europe', fetcher: fetchEuropeanJobs },
+      { name: 'France', fetcher: fetchFranceTravailJobs },
+    ];
+
+    const results = await Promise.allSettled(fetchers.map(({ fetcher }) => fetcher()));
+    const sourceStats = [];
     let allJobs = [];
 
-    // 1. Fetch Swedish jobs
-    const swedenJobs = await fetchSwedenJobs();
-    allJobs.push(...swedenJobs);
+    for (let index = 0; index < fetchers.length; index += 1) {
+      const { name } = fetchers[index];
+      const result = results[index];
 
-    // 2. Fetch Finnish jobs
-    const finlandJobs = await fetchFinlandJobs();
-    allJobs.push(...finlandJobs);
+      if (result.status === 'rejected') {
+        console.error(`Source fetch failed: ${name}`, result.reason?.message || result.reason);
+        sourceStats.push({ name, count: 0, status: 'failed' });
+        continue;
+      }
 
-    // 3. Fetch European / International jobs
-    const euroJobs = await fetchEuropeanJobs();
-    allJobs.push(...euroJobs);
+      const rows = Array.isArray(result.value) ? result.value : [];
+      sourceStats.push({ name, count: rows.length, status: 'ok' });
+      allJobs.push(...rows);
+    }
 
-    // 4. Fetch French job offers when API access and reuse rights are configured
-    const franceJobs = await fetchFranceTravailJobs();
-    allJobs.push(...franceJobs);
+    const dedupedJobs = dedupeJobRows(allJobs);
+    console.log('Ingestion source summary:', sourceStats);
 
-    if (allJobs.length === 0) {
+    if (dedupedJobs.length === 0) {
       console.log('No matching public job listings found.');
       return;
     }
 
-    console.log(`Appending ${allJobs.length} public job listings to Google Sheet...`);
+    console.log(`Appending ${dedupedJobs.length} deduplicated public job listings to Google Sheet...`);
     const sheets = await getSheetsClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: 'Job_Listings!A:H',
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
-      requestBody: { values: allJobs },
+      requestBody: { values: dedupedJobs },
     });
     console.log('Successfully appended multi-source job listings to sheet!');
   } catch (error) {
@@ -282,4 +366,4 @@ async function runIngestionPipeline() {
 
 if (require.main === module) runIngestionPipeline();
 
-module.exports = { fetchFranceTravailJobs, hasExplicitVisaSponsorship };
+module.exports = { fetchFranceTravailJobs, hasExplicitVisaSponsorship, dedupeJobRows, normalizeText };

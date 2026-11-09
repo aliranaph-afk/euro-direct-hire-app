@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { fetchFranceTravailJobs, hasExplicitVisaSponsorship } = require('../ingest');
+const { fetchFranceTravailJobs, hasExplicitVisaSponsorship, dedupeJobRows } = require('../ingest');
 
 test('requires explicit visa or work-permit sponsorship language', () => {
   assert.equal(hasExplicitVisaSponsorship('We offer visa sponsorship for this role.'), true);
@@ -19,6 +19,20 @@ test('excludes postings that explicitly say sponsorship is unavailable', () => {
   assert.equal(hasExplicitVisaSponsorship('We do not offer visa sponsorship.'), false);
   assert.equal(hasExplicitVisaSponsorship('Visa sponsorship is not available.'), false);
   assert.equal(hasExplicitVisaSponsorship('Aucune prise en charge du visa.'), false);
+});
+
+test('deduplicates overlapping job rows after cross-source aggregation', () => {
+  const sourceRows = [
+    ['Welder', 'Sweden', 'Stockholm', 'Example Employer', 'Priority 2', 'https://example.com/welder', 'Potential visa/relocation keyword match - not verified', 'Note'],
+    ['Welder', 'Sweden', 'Stockholm', 'Example Employer', 'Priority 2', 'https://example.com/welder?utm=123', 'Potential visa/relocation keyword match - not verified', 'Note'],
+    ['Welder', 'Sweden', 'Stockholm', 'Example Employer', 'Priority 2', 'https://example.com/welder', 'Potential visa/relocation keyword match - not verified', 'Note'],
+    ['CNC Operator', 'Finland', 'Helsinki', 'Other Employer', 'Priority 1', 'https://example.com/cnc', 'Potential match', 'Note'],
+  ];
+
+  const deduped = dedupeJobRows(sourceRows);
+  assert.equal(deduped.length, 2);
+  assert.equal(deduped[0][0], 'Welder');
+  assert.equal(deduped[1][0], 'CNC Operator');
 });
 
 test('maps only explicit sponsorship matches from France Travail API results', async () => {

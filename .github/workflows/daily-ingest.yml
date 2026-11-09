@@ -9,24 +9,22 @@ on:
 jobs:
   ingest:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@1e60f620b9541d32aece185cd1ad4062093a17e # v4.0.4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install dependencies
-        run: npm install
-
-      - name: Write Service Account JSON Key
-        env:
-          GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
-        run: |
-          echo "$GCP_SERVICE_ACCOUNT_JSON" > service_account.json
+        run: npm ci
 
       - name: Execute Ingestion Pipeline
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         run: node ingest.js
